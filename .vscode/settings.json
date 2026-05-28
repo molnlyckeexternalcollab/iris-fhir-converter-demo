@@ -37,4 +37,8 @@
             "packageManager": "ms-python.python:pip"
         }
     ],
+    "python.analysis.extraPaths": [
+        "./src/CDS/python",
+        "./src/EAI/python"
+    ]
 }
