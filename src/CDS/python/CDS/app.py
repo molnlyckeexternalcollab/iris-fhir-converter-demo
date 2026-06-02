@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from routers.hapi import router as hapi_router
+from routers.cds_services import router as cds_services_router
 
 app = FastAPI(
     title="CDS Service",
@@ -10,6 +11,7 @@ app = FastAPI(
 )
 
 app.include_router(hapi_router)
+app.include_router(cds_services_router)
 
 if __name__ == "__main__":
     import uvicorn
