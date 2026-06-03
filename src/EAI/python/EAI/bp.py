@@ -7,6 +7,10 @@ from iop import BusinessProcess
 import iris
 import jwt
 
+from fhir.resources.codeableconcept import CodeableConcept
+from fhir.resources.coding import Coding
+from fhir.resources.reference import Reference
+from fhir.resources.riskassessment import RiskAssessment, RiskAssessmentPrediction
 from msg import FhirRequest, FhirConverterMessage
 from CDS.models import RiskAssessmentInput, RiskCalculationResult
 from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
@@ -87,54 +91,54 @@ class FhirConverterProcess(BusinessProcess):
             return 65
 
     def _build_risk_assessment(self, risk_result: RiskCalculationResult, patient_ref: str) -> dict:
-        """Build a FHIR R4 RiskAssessment resource from a HAPI risk calculation result."""
-        return {
-            "resourceType": "RiskAssessment",
-            "status": "final",
-            "method": {
-                "coding": [{
-                    "system": "http://snomed.info/sct",
-                    "code": "225338004",
-                    "display": "Risk assessment (procedure)"
-                }],
-                "text": "Reese et al. (2024) HAPI logistic regression model"
-            },
-            "code": {
-                "coding": [{
-                    "system": "http://snomed.info/sct",
-                    "code": "225392000",
-                    "display": "Assessment of risk of pressure injury (procedure)"
-                }]
-            },
-            "subject": {"reference": patient_ref},
-            "occurrenceDateTime": datetime.now(timezone.utc).isoformat(),
-            "performer": {"display": "IRIS CDS HAPI Risk Calculator"},
-            "prediction": [{
-                "outcome": {
-                    "coding": [{
-                        "system": "http://snomed.info/sct",
-                        "code": "709511002",
-                        "display": "Assessment of risk for hospital acquired complication (procedure)"
-                    }]
-                },
-                "probabilityDecimal": risk_result.risk_percentage,
-                "qualitativeRisk": {
-                    "coding": [{
-                        "system": "http://terminology.hl7.org/CodeSystem/risk-probability",
-                        "code": risk_result.risk_category,
-                        "display": risk_result.risk_category.capitalize()
-                    }]
-                },
-                "rationale": (
+        """Build a validated FHIR R4 RiskAssessment resource from a HAPI risk calculation result."""
+        ra = RiskAssessment(
+            status="final",
+            subject=Reference(reference=patient_ref),
+            occurrenceDateTime=datetime.now(timezone.utc).isoformat(),
+            performer=Reference(display="IRIS CDS HAPI Risk Calculator"),
+            method=CodeableConcept(
+                coding=[Coding(
+                    system="http://snomed.info/sct",
+                    code="225338004",
+                    display="Risk assessment (procedure)",
+                )],
+                text="Reese et al. (2024) HAPI logistic regression model",
+            ),
+            code=CodeableConcept(
+                coding=[Coding(
+                    system="http://snomed.info/sct",
+                    code="225392000",
+                    display="Assessment of risk of pressure injury (procedure)",
+                )],
+            ),
+            prediction=[RiskAssessmentPrediction(
+                outcome=CodeableConcept(
+                    coding=[Coding(
+                        system="http://snomed.info/sct",
+                        code="709511002",
+                        display="Assessment of risk for hospital acquired complication (procedure)",
+                    )],
+                ),
+                probabilityDecimal=risk_result.risk_percentage,
+                qualitativeRisk=CodeableConcept(
+                    coding=[Coding(
+                        system="http://terminology.hl7.org/CodeSystem/risk-probability",
+                        code=risk_result.risk_category,
+                        display=risk_result.risk_category.capitalize(),
+                    )],
+                ),
+                rationale=(
                     f"95% CI: {risk_result.ci_lower:.2f}%\u2013{risk_result.ci_upper:.2f}%, "
                     f"Z-score: {risk_result.z_score:.3f}"
-                )
-            }],
-            "mitigation": (
+                ),
+            )],
+            mitigation=(
                 "Implement pressure injury prevention protocol: reposition every 2 hours, "
                 "use pressure-relieving mattress, maintain skin integrity assessment."
-            )
-        }
+            ),
+        )
+        return ra.model_dump(mode='json', exclude_none=True, by_alias=True)
 
     def _add_to_bundle(self, fhir_data: dict, risk_assessment: dict) -> dict:
         """Add the RiskAssessment to a FHIR Bundle, or wrap it in one if needed."""

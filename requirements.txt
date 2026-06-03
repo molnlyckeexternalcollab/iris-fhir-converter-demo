@@ -2,9 +2,10 @@
 a2wsgi
 deepdiff
 fastapi
+fhir.resources
 numpy
-pydantic-settings
 pydantic
+pydantic-settings
 PyJWT
 requests
 scipy
