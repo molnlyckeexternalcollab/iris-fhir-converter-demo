@@ -33,6 +33,7 @@
 
     zn "EAI"
 
+    # Install a FHIR Adapter, see https://docs.intersystems.com/irisforhealth20261/csp/docbook/DocBook.UI.Page.cls?KEY=HXFHIRPROD_fhir_adapter#HXFHIRPROD_fhir_adapter_install_noOAuth
     zw ##class(HS.FHIRServer.Installer).InteropAdapterConfig("/proxy/fhir")
 
     set service = ##class(HS.Registry.Service.HTTP).%New()

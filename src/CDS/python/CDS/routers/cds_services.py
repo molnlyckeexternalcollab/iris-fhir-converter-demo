@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, RootModel, ConfigDict
 
 router = APIRouter(prefix="/cds-services", tags=["CDS Hooks"])
 
@@ -20,6 +20,7 @@ class CdsService(BaseModel):
 
     See: <a href="https://cds-hooks.hl7.org/#response">CDS Hooks Response</a>
     """
+
     hook: str = Field(description="The hook this service is invoked on (e.g. 'patient-view').")
     title: Optional[str] = Field(default=None, description="The human-friendly name of this service. RECOMMENDED.")
     description: str = Field(description="The description of this service.")
@@ -39,6 +40,36 @@ class DiscoveryResponse(BaseModel):
     
     List of available CDS Services that the CDS Client can invoke, along with metadata about each service and any requested prefetch data.
     """
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "hook": "patient-view",
+                "title": "Static CDS Service Example",
+                "description": "An example of a CDS Service that returns a static set of cards",
+                "id": "static-patient-greeter",
+                "prefetch": {
+                    "patientToGreet": "Patient/{{context.patientId}}"
+                }
+            },
+            {
+                "hook": "order-select",
+                "title": "Order Echo CDS Service",
+                "description": "An example of a CDS Service that simply echoes the order(s) being placed",
+                "id": "order-echo",
+                "prefetch": {
+                    "patient": "Patient/{{context.patientId}}",
+                    "medications": "MedicationRequest?patient={{context.patientId}}"
+                }
+            },
+            {
+                "hook": "order-sign",
+                "title": "Pharmacogenomics CDS Service",
+                "description": "An example of a more advanced, precision medicine CDS Service",
+                "id": "pgx-on-order-sign",
+                "usageRequirements": "Note: functionality of this CDS Service is degraded without access to a FHIR Restful API as part of CDS recommendation generation."
+            }
+        ]
+    })
     services: list[CdsService]
 
 
@@ -47,18 +78,30 @@ class DiscoveryResponse(BaseModel):
 _SERVICES: list[CdsService] = [
     CdsService(
         hook="patient-view",
-        title="Patient View Test Hook",
-        description="A simple test CDS Hook that displays a custom card when viewing a patient",
-        id="patient-view",
-        prefetch={"patient": "Patient/{{context.patientId}}"},
+        title="Static CDS Service Examples",
+        description="An example of a CDS Service that returns a static set of cards",
+        id="static-patient-greeter",
+        prefetch={
+            "patientToGreet": "Patient/{{context.patientId}}"
+        },
     ),
     CdsService(
         hook="order-select",
-        title="Order Select Test Hook",
-        description="A test CDS Hook for order selection workflow",
-        id="order-select",
-        prefetch={"patient": "Patient/{{context.patientId}}"},
+        title="Order Echo CDS Service",
+        description="An example of a CDS Service that simply echoes the order(s) being placed",
+        id="order-echo",
+        prefetch={
+            "patient": "Patient/{{context.patientId}}",
+            "medications": "MedicationRequest?patient={{context.patientId}}"
+        },
     ),
+    CdsService(
+        hook="order-sign",
+        title="Pharmacogenomics CDS Service",
+        description="An example of a more advanced, precision medicine CDS Service",
+        id="pgx-on-order-sign",
+        usageRequirements="Note: functionality of this CDS Service is degraded without access to a FHIR Restful API as part of CDS recommendation generation."
+    )
 ]
 
 
