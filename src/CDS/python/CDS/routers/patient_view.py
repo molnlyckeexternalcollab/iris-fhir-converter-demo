@@ -20,6 +20,7 @@ from .cds_hooks_models import (
     build_smart_launch_url,
     log_feedback,
 )
+from .epic_extensions import get_epic_extensions
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,9 @@ class PatientViewContext(HookContext):
 class PatientViewRequest(CdsHookRequest):
     """CDS Hooks request body for the ``patient-view`` hook.
 
-    Narrows ``context`` to ``PatientViewContext`` so that ``userId`` and
-    ``patientId`` are validated as required fields.
+    Vendor-neutral: accepts requests from any CDS client (Epic, Cerner, etc.).
+    Epic vendor extensions, if present, can be accessed via
+    ``get_epic_extensions(body)`` inside the handler.
     """
     context: PatientViewContext  # type: ignore[assignment]
 
@@ -66,6 +68,12 @@ async def patient_view(body: PatientViewRequest) -> CdsHookResponse:
         body.hookInstance,
         body.context.patientId,
     )
+
+    # Opportunistically parse Epic extensions — None for non-Epic callers.
+    epic_ext = get_epic_extensions(body)
+    if epic_ext is not None:
+        logger.debug("Epic caller detected — trigger=%s epic_version=%s",
+                     epic_ext.bpa_trigger_action, epic_ext.epic_version)
 
     patient_id = body.context.patientId
     smart_url = build_smart_launch_url(body.fhirServer, patient_id)

@@ -115,6 +115,13 @@ class CdsHookRequest(BaseModel):
     fhirAuthorization: Optional[FhirAuthorization] = Field(default=None, description="A structure holding an <a href='https://oauth.net/2/'>OAuth 2.0</a> bearer access token granting the CDS Service access to FHIR resources, along with supplemental information relating to the token. See the <a href='https://cds-hooks.hl7.org/#fhir-resource-access'>FHIR Resource Access</a> section for more information.")
     context: HookContext = Field(description="Hook-specific contextual data that the CDS service will need. For example, with the patient-view hook this will include the FHIR id of the <a href='https://www.hl7.org/fhir/patient.html'>Patient</a> being viewed. For details, see the Hooks specific specification page (example: <a href='https://build.fhir.org/ig/HL7/cds-hooks-library/patient-view.html'>patient-view</a>).")
     prefetch: Optional[PrefetchData] = Field(default=None, description="The FHIR data that was prefetched by the CDS Client.")
+    extension: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Optional vendor-specific extensions. The CDS Hooks specification reserves this key "
+                    "and requires that extension names use reverse-domain-name notation "
+                    "(e.g. com.example.my-extension). "
+                    "See: <a href='https://cds-hooks.hl7.org/#extensions'>CDS Hooks Extensions</a>.",
+    )
 
     @model_validator(mode="after")
     def fhir_server_required_with_authorization(self) -> "CdsHookRequest":
