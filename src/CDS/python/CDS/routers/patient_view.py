@@ -72,8 +72,17 @@ async def patient_view(body: PatientViewRequest) -> CdsHookResponse:
     # Opportunistically parse Epic extensions — None for non-Epic callers.
     epic_ext = get_epic_extensions(body)
     if epic_ext is not None:
-        logger.debug("Epic caller detected — trigger=%s epic_version=%s",
-                     epic_ext.bpa_trigger_action, epic_ext.epic_version)
+        logger.info(
+            "Epic caller detected — "
+            "trigger=%s | cds_hooks_spec=%s | fhir_version=%s | "
+            "criteria_id=%s | epic_version=%s | impl_version=%s",
+            epic_ext.bpa_trigger_action,
+            epic_ext.cds_hooks_specification_version,
+            epic_ext.fhir_version,
+            epic_ext.criteria_id,
+            epic_ext.epic_version,
+            epic_ext.cds_hooks_implementation_version,
+        )
 
     patient_id = body.context.patientId
     smart_url = build_smart_launch_url(body.fhirServer, patient_id)

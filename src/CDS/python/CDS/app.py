@@ -1,8 +1,16 @@
+import logging
+
 from fastapi import FastAPI
 from routers.hapi import router as hapi_router
 from routers.cds_services import router as cds_services_router
 from routers.patient_view import router as patient_view_router
 from routers.order_select import router as order_select_router
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
 
 app = FastAPI(
     title="CDS Service",

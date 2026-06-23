@@ -8,6 +8,7 @@ Python identifiers directly — Pydantic ``Field(alias=...)`` is used instead.
 Reference: https://fhir.epic.com/Documentation?docId=cds-hooks (Epic Extensions section)
 """
 
+from enum import IntEnum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,6 +16,51 @@ from pydantic import BaseModel, ConfigDict, Field
 from .cds_hooks_models import CdsHookRequest
 
 _EPIC_KEY_PREFIX = "com.epic."
+
+
+class EpicBpaTriggerAction(IntEnum):
+    """Known values for Epic's ``com.epic.cdshooks.request.bpa-trigger-action`` extension.
+
+    Each member carries a human-readable ``label`` alongside its integer value::
+
+        str(EpicBpaTriggerAction.OPEN_PATIENT_CHART)  # "Open patient chart (60)"
+        EpicBpaTriggerAction.OPEN_PATIENT_CHART.label  # "Open patient chart"
+        int(EpicBpaTriggerAction.OPEN_PATIENT_CHART)   # 60
+
+    Reference: https://fhir.epic.com/Documentation?docId=cds-hooks
+    """
+
+    def __new__(cls, value: int, label: str = "") -> "EpicBpaTriggerAction":
+        """Trick for attaching extra data.
+
+        This trick is the standard Python enum pattern for attaching extra data — the integer ``_value_`` is set first
+        (so IntEnum machinery works), then label is stored as a plain instance attribute.
+
+            t = EpicBpaTriggerAction.OPEN_PATIENT_CHART
+
+            str(t)   # "Open patient chart (60)"
+            t.label  # "Open patient chart"
+            t.name   # "OPEN_PATIENT_CHART"
+            int(t)   # 60
+            t == 60  # True
+        """
+        obj = int.__new__(cls, value)
+        obj._value_ = value # consumed by the Enum metaclass machinery
+        obj.label = label
+        return obj
+
+    GENERAL_OPA        = (5,  "General OPA section")
+    ENTER_PROBLEM      = (6,  "Enter problem")
+    ENTER_DIAGNOSIS    = (7,  "Enter diagnosis")
+    ENTER_ORDER        = (18, "Enter order")
+    SIGN_ORDERS        = (23, "Sign orders")
+    IP_ADMISSION_OPA   = (26, "IP Admission OPA section")
+    IP_DISCHARGE_OPA   = (27, "IP Discharge OPA section")
+    IP_TRANSFER_OPA    = (29, "IP Transfer OPA section")
+    OPEN_PATIENT_CHART = (60, "Open patient chart")
+
+    def __str__(self) -> str:
+        return f"{self.label} ({self.value})"
 
 
 class EpicExtensions(BaseModel):
@@ -28,14 +74,12 @@ class EpicExtensions(BaseModel):
     """
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    bpa_trigger_action: Optional[int] = Field(
+    bpa_trigger_action: Optional[EpicBpaTriggerAction] = Field(
         default=None,
         alias="com.epic.cdshooks.request.bpa-trigger-action",
         description=(
             "The specific trigger action in Epic that is mapped to the hook. "
-            "Common values: 5 (General OPA), 6 (Enter problem), 7 (Enter diagnosis), "
-            "18 (Enter order), 23 (Sign orders), 26 (IP Admission OPA), "
-            "27 (IP Discharge OPA), 29 (IP Transfer OPA), 60 (Open patient chart)."
+            "See ``EpicBpaTriggerAction`` for known values."
         ),
     )
     cds_hooks_specification_version: Optional[str] = Field(
