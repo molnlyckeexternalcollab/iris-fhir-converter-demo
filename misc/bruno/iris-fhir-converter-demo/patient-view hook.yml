@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{http_base_url}}/cds-services/patient-view"
+  url: "{{http_base_url}}/cds/cds-services/patient-view"
   headers:
     - name: Content-Type
       value: application/json

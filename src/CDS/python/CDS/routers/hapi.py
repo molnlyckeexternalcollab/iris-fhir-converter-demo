@@ -1,5 +1,5 @@
 import traceback
-from CDS.interop.bs import get_bs
+from CDS.interop.bs.hapi import get_bs
 from fastapi import APIRouter, HTTPException
 from CDS.models import RiskAssessmentInput, RiskCalculationResult
 
