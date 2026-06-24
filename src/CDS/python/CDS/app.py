@@ -1,6 +1,8 @@
 import logging
+import traceback
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
 from routers.hapi import router as hapi_router
 from routers.cds_services import router as cds_services_router
 from routers.patient_view import router as patient_view_router
@@ -19,6 +21,15 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    """Return a plain text response with the traceback for debugging.
+    
+    TODO: This is useful for development and debugging, but should not be used in production.
+    """
+    return PlainTextResponse(traceback.format_exc(), status_code=500)
 
 app.include_router(hapi_router)
 app.include_router(cds_services_router)
