@@ -1,5 +1,5 @@
 # grongier: Interoperability On Python (IoP) proof of concept
-iris-pex-embedded-python
+iris-pex-embedded-python<4.0.0
 # grongier: This is a module that wraps embedded python in the IRIS Dataplatform. It provides a simple interface to run python code in IRIS.    
 iris-embedded-python-wrapper==0.5.15b3
 # grongier: Provides a python implementation of FHIR-Converter written in C#.
