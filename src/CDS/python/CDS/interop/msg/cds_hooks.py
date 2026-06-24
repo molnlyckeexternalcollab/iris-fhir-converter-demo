@@ -1,32 +1,49 @@
 """IOP message types for CDS Hooks interop flow.
 
 These are the message classes exchanged between the CDS BS → BP → BO
-components.  They wrap the Pydantic models from the CDS router layer so
-that the business logic can reason in FHIR/CDS terms rather than raw dicts.
+components.
 
 IOP constraint: PydanticMessage subclasses must NOT have an @dataclass
 decorator.  IOP serialises them via model_dump_json()/model_validate_json().
+
+Design note — two-context import split:
+  WSGI workers load modules as `routers.*` (IRIS adds CDS/ to sys.path).
+  The IRIS production loads modules as `CDS.routers.*` (only src/CDS/python
+  on sys.path via PYTHONPATH).  The same source file would be two different
+  Python module objects and therefore two different class objects — Pydantic
+  would reject instances of one as "not an instance of" the other.
+  Solution: use Any for the hook payload fields.  IOP serialises via JSON
+  so class identity is irrelevant across the BS→BP boundary.  Each side
+  reconstructs the typed model after deserialization using its own import path.
 """
 
 from typing import Any, Optional
 
 from iop import PydanticMessage
 
-from CDS.routers.cds_hooks_models import CdsHookRequest, CdsHookResponse
+# No imports from routers.* or CDS.routers.* — this module is imported by
+# both the WSGI context (BS) and the production context (BP/BO) and must
+# remain neutral.
 
 
 # ---------------------------------------------------------------------------
 # patient-view
 # ---------------------------------------------------------------------------
 
-class PatientViewRequest(PydanticMessage):
-    """Wraps the inbound CDS Hooks request for the patient-view hook."""
-    request: CdsHookRequest
+class PatientViewInputRequest(PydanticMessage):
+    """Carries the patient-view CDS Hooks request across the BS→BP boundary.
+
+    ``input`` is typed as Any so that Pydantic does not enforce class identity
+    across the two import contexts.  The BS passes a PatientViewHookInput
+    instance; IOP serialises it to JSON; the BP deserialises as a dict and
+    reconstructs PatientViewHookInput via model_validate().
+    """
+    input: Any
 
 
 class PatientViewResponse(PydanticMessage):
-    """Wraps the outbound CDS Hooks response for the patient-view hook."""
-    response: CdsHookResponse
+    """Carries the patient-view CDS Hooks response across the BP→BS boundary."""
+    response: Any
 
 
 # ---------------------------------------------------------------------------
@@ -34,13 +51,11 @@ class PatientViewResponse(PydanticMessage):
 # ---------------------------------------------------------------------------
 
 class OrderSelectRequest(PydanticMessage):
-    """Wraps the inbound CDS Hooks request for the order-select hook."""
-    request: CdsHookRequest
+    input: Any
 
 
 class OrderSelectResponse(PydanticMessage):
-    """Wraps the outbound CDS Hooks response for the order-select hook."""
-    response: CdsHookResponse
+    response: Any
 
 
 # ---------------------------------------------------------------------------
@@ -48,13 +63,11 @@ class OrderSelectResponse(PydanticMessage):
 # ---------------------------------------------------------------------------
 
 class OrderSignRequest(PydanticMessage):
-    """Wraps the inbound CDS Hooks request for the order-sign hook."""
-    request: CdsHookRequest
+    input: Any
 
 
 class OrderSignResponse(PydanticMessage):
-    """Wraps the outbound CDS Hooks response for the order-sign hook."""
-    response: CdsHookResponse
+    response: Any
 
 
 # ---------------------------------------------------------------------------

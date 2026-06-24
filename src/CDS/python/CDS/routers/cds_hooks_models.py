@@ -67,6 +67,7 @@ class PatientName(BaseModel):
 
 class PatientPrefetch(BaseModel):
     name: Optional[list[PatientName]] = None
+    birthDate: Optional[str] = None
 
 
 class PrefetchData(BaseModel):
