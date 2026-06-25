@@ -3,10 +3,10 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-from routers.hapi import router as hapi_router
-from routers.cds_services import router as cds_services_router
-from routers.patient_view import router as patient_view_router
-from routers.order_select import router as order_select_router
+from CDS.routers.hapi import router as hapi_router
+from CDS.routers.cds_services import router as cds_services_router
+from CDS.routers.patient_view import router as patient_view_router
+from CDS.routers.order_select import router as order_select_router
 
 logging.basicConfig(
     level=logging.DEBUG,

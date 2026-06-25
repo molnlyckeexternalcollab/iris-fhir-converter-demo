@@ -6,24 +6,24 @@ components.
 IOP constraint: PydanticMessage subclasses must NOT have an @dataclass
 decorator.  IOP serialises them via model_dump_json()/model_validate_json().
 
-Design note — two-context import split:
-  WSGI workers load modules as `routers.*` (IRIS adds CDS/ to sys.path).
-  The IRIS production loads modules as `CDS.routers.*` (only src/CDS/python
-  on sys.path via PYTHONPATH).  The same source file would be two different
-  Python module objects and therefore two different class objects — Pydantic
-  would reject instances of one as "not an instance of" the other.
-  Solution: use Any for the hook payload fields.  IOP serialises via JSON
-  so class identity is irrelevant across the BS→BP boundary.  Each side
-  reconstructs the typed model after deserialization using its own import path.
+Design note — why hook payload fields are typed Any:
+  The WSGI worker (FastAPI) has CDS/ on sys.path, so it imports
+  PatientViewHookInput as `routers.contexts.PatientViewHookInput`.
+  The production worker has src/CDS/python on sys.path, so it imports the
+  same class as `CDS.routers.contexts.PatientViewHookInput`.
+  These are two different Python class objects.  If the fields were typed as
+  PatientViewHookInput, IOP would reject instances from the WSGI context as
+  "not an instance of" the production-context class.
+  Typing as Any sidesteps this: IOP serialises the value to JSON regardless,
+  and the receiving side reconstructs the typed model via model_validate().
 """
 
 from typing import Any, Optional
 
 from iop import PydanticMessage
 
-# No imports from routers.* or CDS.routers.* — this module is imported by
-# both the WSGI context (BS) and the production context (BP/BO) and must
-# remain neutral.
+from CDS.routers.contexts import PatientViewHookInput
+from CDS.routers.cds_hooks_models import CdsHookResponse
 
 
 # ---------------------------------------------------------------------------
@@ -31,19 +31,13 @@ from iop import PydanticMessage
 # ---------------------------------------------------------------------------
 
 class PatientViewInputRequest(PydanticMessage):
-    """Carries the patient-view CDS Hooks request across the BS→BP boundary.
-
-    ``input`` is typed as Any so that Pydantic does not enforce class identity
-    across the two import contexts.  The BS passes a PatientViewHookInput
-    instance; IOP serialises it to JSON; the BP deserialises as a dict and
-    reconstructs PatientViewHookInput via model_validate().
-    """
-    input: Any
+    """Carries the patient-view CDS Hooks request across the BS→BP boundary."""
+    input: PatientViewHookInput
 
 
 class PatientViewResponse(PydanticMessage):
     """Carries the patient-view CDS Hooks response across the BP→BS boundary."""
-    response: Any
+    response: CdsHookResponse
 
 
 # ---------------------------------------------------------------------------

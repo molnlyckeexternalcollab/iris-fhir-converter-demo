@@ -462,19 +462,6 @@ http:
       }
   auth: inherit
 
-runtime:
-  actions:
-    - type: set-variable
-      phase: after-response
-      selector:
-        expression: |-
-          const total = res.getBody().total;
-          console.log("Patient count:", total);
-        method: jsonq
-      variable:
-        name: ""
-        scope: runtime
-
 settings:
   encodeUrl: true
   timeout: 0

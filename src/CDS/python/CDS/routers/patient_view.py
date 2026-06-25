@@ -48,8 +48,7 @@ async def patient_view(body: PatientViewHookInput) -> CdsHookResponse:
         )
 
     rsp = get_bs().on_process_input(body)
-    # rsp.response is a dict after IOP JSON round-trip — reconstruct the typed model.
-    return CdsHookResponse.model_validate(rsp.response)
+    return rsp.response
 
 
 @router.post("/patient-view/feedback", status_code=200)

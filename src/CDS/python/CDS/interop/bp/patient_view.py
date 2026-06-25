@@ -46,11 +46,7 @@ class PatientView(BusinessProcess):
     def on_patient_view_request_message(
         self, request: PatientViewInputRequest
     ) -> PatientViewResponse:
-        # Reconstruct the typed model from the JSON-deserialized dict.
-        # The BS serialised a PatientViewHookInput; IOP passed it as JSON;
-        # we get a dict here and rebuild the typed model using the production
-        # context's CDS.routers.contexts import path.
-        hook_request = PatientViewHookInput.model_validate(request.input)
+        hook_request = request.input
         context = hook_request.context
 
         patient_id: str = context.patientId
