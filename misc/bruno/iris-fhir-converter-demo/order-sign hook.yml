@@ -1,0 +1,230 @@
+info:
+  name: order-sign hook
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{http_base_url}}/cds/cds-services/order-sign"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "hookInstance": "b1c2d3e4-f5a6-11ea-bf16-460231621f93",
+        "fhirServer": "https://example.com/interconnect-instance-oauth/api/FHIR/R4",
+        "hook": "order-sign",
+        "fhirAuthorization": {
+          "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.placeholder",
+          "token_type": "Bearer",
+          "expires_in": 300,
+          "scope": "MedicationRequest.Read (R4) ServiceRequest.Read (R4) Patient.Read (R4)",
+          "subject": "aeac3da7-6481-45af-ad41-42e5e701141d"
+        },
+        "context": {
+          "patientId": "eXoGxqgBaJuNkuahMYmiDhg3",
+          "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
+          "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+          "draftOrders": {
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+              {
+                "resource": {
+                  "resourceType": "MedicationRequest",
+                  "id": "order-ibuprofen-001",
+                  "status": "draft",
+                  "intent": "order",
+                  "category": [
+                    {
+                      "coding": [
+                        {
+                          "system": "http://terminology.hl7.org/CodeSystem/medicationrequest-category",
+                          "code": "inpatient",
+                          "display": "Inpatient"
+                        }
+                      ],
+                      "text": "Inpatient"
+                    }
+                  ],
+                  "priority": "routine",
+                  "medicationReference": {
+                    "reference": "Medication/med-ibuprofen-001",
+                    "display": "IBUPROFEN 200 MG PO TABS"
+                  },
+                  "subject": {
+                    "reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3",
+                    "display": "Patient, Test"
+                  },
+                  "encounter": {
+                    "reference": "Encounter/eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3"
+                  },
+                  "requester": {
+                    "reference": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+                    "display": "Family Medicine Physician"
+                  },
+                  "dosageInstruction": [
+                    {
+                      "text": "200mg by mouth every 6 hours as needed for pain",
+                      "timing": {
+                        "repeat": {
+                          "frequency": 1,
+                          "period": 6,
+                          "periodUnit": "h"
+                        }
+                      },
+                      "asNeededBoolean": true,
+                      "doseAndRate": [
+                        {
+                          "doseQuantity": {
+                            "value": 200,
+                            "unit": "mg",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "mg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "resource": {
+                  "resourceType": "Medication",
+                  "id": "med-ibuprofen-001",
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                        "code": "1049502",
+                        "display": "Ibuprofen 200 MG Oral Tablet"
+                      },
+                      {
+                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                        "code": "5640",
+                        "display": "Ibuprofen"
+                      }
+                    ],
+                    "text": "Ibuprofen 200 MG Oral Tablet"
+                  },
+                  "form": {
+                    "coding": [
+                      {
+                        "system": "http://snomed.info/sct",
+                        "code": "385055001",
+                        "display": "Tablet"
+                      }
+                    ],
+                    "text": "Tablet"
+                  },
+                  "ingredient": [
+                    {
+                      "itemCodeableConcept": {
+                        "coding": [
+                          {
+                            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                            "code": "5640",
+                            "display": "Ibuprofen"
+                          }
+                        ]
+                      },
+                      "strength": {
+                        "numerator": {
+                          "value": 200,
+                          "unit": "mg",
+                          "system": "http://unitsofmeasure.org",
+                          "code": "mg"
+                        },
+                        "denominator": {
+                          "value": 1,
+                          "unit": "tablet",
+                          "system": "http://unitsofmeasure.org",
+                          "code": "{tablet}"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "resource": {
+                  "resourceType": "ServiceRequest",
+                  "id": "order-wound-care-001",
+                  "status": "draft",
+                  "intent": "order",
+                  "priority": "routine",
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "http://snomed.info/sct",
+                        "code": "182531007",
+                        "display": "Dressing of wound"
+                      }
+                    ],
+                    "text": "Wound dressing change"
+                  },
+                  "subject": {
+                    "reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3"
+                  },
+                  "encounter": {
+                    "reference": "Encounter/eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3"
+                  },
+                  "requester": {
+                    "reference": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+                    "display": "Family Medicine Physician"
+                  },
+                  "occurrenceTiming": {
+                    "repeat": {
+                      "frequency": 1,
+                      "period": 3,
+                      "periodUnit": "d"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "prefetch": {
+          "patient": {
+            "resourceType": "Patient",
+            "id": "eXoGxqgBaJuNkuahMYmiDhg3",
+            "name": [
+              {
+                "use": "official",
+                "family": "Physician",
+                "given": ["Family Medicine"]
+              }
+            ],
+            "gender": "male",
+            "birthDate": "1981-06-24"
+          }
+        },
+        "extension": {
+          "com.epic.cdshooks.request.bpa-trigger-action": "23",
+          "com.epic.cdshooks.request.cds-hooks-specification-version": "1.0",
+          "com.epic.cdshooks.request.fhir-version": "R4",
+          "com.epic.cdshooks.request.criteria-id": "2854",
+          "com.epic.cdshooks.request.epic-version": "9.4",
+          "com.epic.cdshooks.request.cds-hooks-implementation-version": "1.0",
+          "com.epic.cdshooks.request.cds-hooks-su-version": "0"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: >
+  Tests the order-sign CDS hook. Unlike order-select there is no 'selections' array —
+  all draftOrders are being signed. This payload includes two orders:
+  1. A MedicationRequest for ibuprofen (RxNorm 5640 — an NSAID) → triggers the NSAID
+     wound healing warning card with a suggestion to add a prophylactic Mepilex Border dressing.
+  2. A ServiceRequest for wound dressing change → triggers the dressing selection
+     confirmation card.
+  Epic bpa-trigger-action 23 = Sign orders.

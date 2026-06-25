@@ -7,6 +7,7 @@ from CDS.routers.hapi import router as hapi_router
 from CDS.routers.cds_services import router as cds_services_router
 from CDS.routers.patient_view import router as patient_view_router
 from CDS.routers.order_select import router as order_select_router
+from CDS.routers.order_sign import router as order_sign_router
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -35,6 +36,7 @@ app.include_router(hapi_router)
 app.include_router(cds_services_router)
 app.include_router(patient_view_router)
 app.include_router(order_select_router)
+app.include_router(order_sign_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from iop import PydanticMessage
 
-from CDS.routers.contexts import PatientViewHookInput
+from CDS.routers.contexts import PatientViewHookInput, OrderSelectHookInput, OrderSignHookInput
 from CDS.routers.cds_hooks_models import CdsHookResponse
 
 
@@ -45,11 +45,11 @@ class PatientViewResponse(PydanticMessage):
 # ---------------------------------------------------------------------------
 
 class OrderSelectRequest(PydanticMessage):
-    input: Any
+    input: OrderSelectHookInput
 
 
 class OrderSelectResponse(PydanticMessage):
-    response: Any
+    response: CdsHookResponse
 
 
 # ---------------------------------------------------------------------------
@@ -57,11 +57,11 @@ class OrderSelectResponse(PydanticMessage):
 # ---------------------------------------------------------------------------
 
 class OrderSignRequest(PydanticMessage):
-    input: Any
+    input: OrderSignHookInput
 
 
 class OrderSignResponse(PydanticMessage):
-    response: Any
+    response: CdsHookResponse
 
 
 # ---------------------------------------------------------------------------

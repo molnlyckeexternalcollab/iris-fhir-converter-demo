@@ -4,15 +4,9 @@ import logging
 
 from fastapi import APIRouter
 
-from .cds_hooks_models import (
-    CdsCard,
-    CdsHookRequest,
-    CdsHookResponse,
-    CdsSource,
-    FeedbackRequest,
-    _MOLNLYCKE_SOURCE,
-    log_feedback,
-)
+from .cds_hooks_models import CdsHookResponse, FeedbackRequest, log_feedback
+from .contexts import OrderSelectHookInput
+from CDS.interop.bs.order_select import get_bs
 
 logger = logging.getLogger(__name__)
 
@@ -20,22 +14,11 @@ router = APIRouter(prefix="/cds-services", tags=["CDS Hooks — order-select"])
 
 
 @router.post("/order-select", response_model=CdsHookResponse)
-async def order_select(body: CdsHookRequest) -> CdsHookResponse:
-    """CDS Hooks — order-select hook. Returns a simple informational card."""
-    logger.info("order-select hook called: hookInstance=%s", body.hookInstance)
-
-    return CdsHookResponse(cards=[
-        CdsCard(
-            uuid="order-select-info-001",
-            summary="Order selection — Mölnlycke wound care products available",
-            detail=(
-                "Consider Mölnlycke wound care products for this patient. "
-                "Launch the decision support app for personalised recommendations."
-            ),
-            indicator="info",
-            source=CdsSource(**_MOLNLYCKE_SOURCE),
-        )
-    ])
+async def order_select(body: OrderSelectHookInput) -> CdsHookResponse:
+    """CDS Hooks — order-select hook. Delegates to BS.OrderSelect → BP.OrderSelect."""
+    logger.info("order-select hook called: hookInstance=%s patientId=%s", body.hookInstance, body.context.patientId)
+    rsp = get_bs().on_process_input(body)
+    return rsp.response
 
 
 @router.post("/order-select/feedback", status_code=200)
