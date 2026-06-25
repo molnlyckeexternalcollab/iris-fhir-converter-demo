@@ -5,7 +5,7 @@ Kept in a dedicated module to avoid circular imports between routers/ and intero
 
 from typing import Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from .cds_hooks_models import CdsHookRequest, HookContext
 
@@ -50,6 +50,57 @@ class OrderSelectContext(HookContext):
 
 class OrderSelectHookInput(CdsHookRequest):
     """CDS Hooks request body for the ``order-select`` hook."""
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "hookInstance": "a3b4c5d6-e7f8-11ea-bf16-460231621f93",
+                "fhirServer": "https://example.com/interconnect-instance-oauth/api/FHIR/R4",
+                "hook": "order-select",
+                "context": {
+                    "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+                    "patientId": "eXoGxqgBaJuNkuahMYmiDhg3",
+                    "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
+                    "selections": ["MedicationRequest/order-mepilex-001"],
+                    "draftOrders": {
+                        "resourceType": "Bundle",
+                        "type": "collection",
+                        "entry": [
+                            {
+                                "resource": {
+                                    "resourceType": "MedicationRequest",
+                                    "id": "order-mepilex-001",
+                                    "status": "draft",
+                                    "intent": "order",
+                                    "priority": "routine",
+                                    "medicationReference": {
+                                        "reference": "Medication/med-ibuprofen-001",
+                                        "display": "IBUPROFEN 200 MG PO TABS",
+                                    },
+                                    "subject": {"reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3"},
+                                }
+                            },
+                            {
+                                "resource": {
+                                    "resourceType": "Medication",
+                                    "id": "med-ibuprofen-001",
+                                    "code": {
+                                        "coding": [
+                                            {
+                                                "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                                "code": "5640",
+                                                "display": "Ibuprofen",
+                                            }
+                                        ],
+                                        "text": "Ibuprofen 200 MG Oral Tablet",
+                                    },
+                                }
+                            },
+                        ],
+                    },
+                },
+            }
+        ]
+    })
     context: OrderSelectContext  # type: ignore[assignment]
 
 
@@ -63,4 +114,74 @@ class OrderSignContext(HookContext):
 
 class OrderSignHookInput(CdsHookRequest):
     """CDS Hooks request body for the ``order-sign`` hook."""
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "hookInstance": "b1c2d3e4-f5a6-11ea-bf16-460231621f93",
+                "fhirServer": "https://example.com/interconnect-instance-oauth/api/FHIR/R4",
+                "hook": "order-sign",
+                "context": {
+                    "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+                    "patientId": "eXoGxqgBaJuNkuahMYmiDhg3",
+                    "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
+                    "draftOrders": {
+                        "resourceType": "Bundle",
+                        "type": "collection",
+                        "entry": [
+                            {
+                                "resource": {
+                                    "resourceType": "MedicationRequest",
+                                    "id": "order-ibuprofen-001",
+                                    "status": "draft",
+                                    "intent": "order",
+                                    "priority": "routine",
+                                    "medicationReference": {
+                                        "reference": "Medication/med-ibuprofen-001",
+                                        "display": "IBUPROFEN 200 MG PO TABS",
+                                    },
+                                    "subject": {"reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3"},
+                                }
+                            },
+                            {
+                                "resource": {
+                                    "resourceType": "Medication",
+                                    "id": "med-ibuprofen-001",
+                                    "code": {
+                                        "coding": [
+                                            {
+                                                "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                                                "code": "5640",
+                                                "display": "Ibuprofen",
+                                            }
+                                        ],
+                                        "text": "Ibuprofen 200 MG Oral Tablet",
+                                    },
+                                }
+                            },
+                            {
+                                "resource": {
+                                    "resourceType": "ServiceRequest",
+                                    "id": "order-wound-care-001",
+                                    "status": "draft",
+                                    "intent": "order",
+                                    "priority": "routine",
+                                    "code": {
+                                        "coding": [
+                                            {
+                                                "system": "http://snomed.info/sct",
+                                                "code": "182531007",
+                                                "display": "Dressing of wound",
+                                            }
+                                        ],
+                                        "text": "Wound dressing change",
+                                    },
+                                    "subject": {"reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3"},
+                                }
+                            },
+                        ],
+                    },
+                },
+            }
+        ]
+    })
     context: OrderSignContext  # type: ignore[assignment]
