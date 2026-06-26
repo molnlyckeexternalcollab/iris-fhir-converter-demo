@@ -41,6 +41,12 @@ legacy health formats — HL7v2, C-CDA, JSON — into FHIR R4 using Liquid templ
       - [The exception: standalone scripts](#the-exception-standalone-scripts)
       - [Summary](#summary)
       - [APP\_HOME is special](#app_home-is-special)
+  - [Python sys.path — how it all fits together](#python-syspath--how-it-all-fits-together)
+    - [Source layout](#source-layout)
+    - [1. PYTHONPATH — set in the Dockerfile](#1-pythonpath--set-in-the-dockerfile)
+    - [2. IRIS WSGI (`WSGIAppLocation` + `iris_wsgi_interface.py`)](#2-iris-wsgi-wsgiapplocation--iris_wsgi_interfacepy)
+    - [3. IRIS production worker (`iop --migrate` / `iop` interop)](#3-iris-production-worker-iop---migrate--iop-interop)
+    - [Import rule summary](#import-rule-summary)
   - [License key file (if any)](#license-key-file-if-any)
 
 ## Useful Links
@@ -347,6 +353,118 @@ But once built, the value is frozen — it cannot be changed without a rebuild.
 | Values differ                         | `[ FAIL ]`  | `[ FAIL ]` |
 | All good                              | `[  OK  ]`  | `[  OK  ]` |
 
+## Python sys.path — how it all fits together
+
+Understanding which directories end up on `sys.path` is critical for writing correct imports across three different Python contexts that IRIS creates: the WSGI worker, the production worker, and the `iop --migrate` command.
+
+### Source layout
+
+```text
+src/
+├── CDS
+│   └── python
+│       └── CDS                  ← the CDS Python package
+│           ├── app.py           ← FastAPI entrypoint (loaded by IRIS WSGI)
+│           ├── fhir_client/
+│           ├── interop/
+│           │   ├── bo/
+│           │   ├── bp/
+│           │   ├── bs/
+│           │   └── msg/
+│           └── routers/
+└── EAI
+    └── python
+        └── EAI                  ← the EAI Python package
+```
+
+### 1. PYTHONPATH — set in the Dockerfile
+
+```dockerfile
+ENV PYTHONPATH="${APP_HOME}/src/CDS/python:${APP_HOME}/src/EAI/python"
+```
+
+This is the baseline that every Python process inside the container inherits.
+It gives both the CDS and EAI packages the same root, so any import starting with `CDS.` or `EAI.` resolves correctly.
+
+### 2. IRIS WSGI (`WSGIAppLocation` + `iris_wsgi_interface.py`)
+
+The web application is declared in `initdb.d/merge.cpf`:
+
+```text
+CreateApplication:Name=/cds,
+  WSGIAppLocation=/irisdev/app/src/CDS/python/CDS/,
+  WSGIAppName=app,
+  WSGICallable=app,
+  ...
+```
+
+`iris_wsgi_interface.py` receives these three values as `app_path`, `module`, and `callable`:
+
+```python
+def get_from_module(module, app_path, callable, debug):
+    # 1. Adds WSGIAppLocation to sys.path:
+    sys.path.append(app_path)                                        # → .../CDS/
+    sys.path.append(os.path.abspath(os.path.join(app_path, os.pardir)))  # → .../src/CDS/python/
+
+    # 2. Imports WSGIAppName as a top-level module (not CDS.app):
+    module_obj = importlib.import_module(module)                     # import_module('app')
+
+    # 3. Returns WSGICallable from it (the FastAPI instance):
+    return getattr(module_obj, callable)                             # app.app
+```
+
+Consequence for `sys.path` in the WSGI worker:
+
+| Entry added by            | Path                                                 |
+|---------------------------|------------------------------------------------------|
+| `PYTHONPATH` (Dockerfile) | `/irisdev/app/src/CDS/python`                        |
+| `PYTHONPATH` (Dockerfile) | `/irisdev/app/src/EAI/python`                        |
+| WSGI (app_path)           | `/irisdev/app/src/CDS/python/CDS/`                   |
+| WSGI (parent of app_path) | `/irisdev/app/src/CDS/python/` (duplicate, harmless) |
+
+Both `CDS/` and `src/CDS/python/` are on `sys.path` before `app.py` is even imported.  This means **both** `from routers.X import` and `from CDS.routers.X import` would technically resolve.
+
+**We always use `CDS.*`** — this is the canonical import path that is consistent with how the IRIS production worker resolves the same modules (see below).  Using bare `from routers.X import` in `app.py` would register the class under a different key in `sys.modules`, causing Pydantic class identity failures when the same class is compared across the WSGI and production contexts.
+
+Note that `app.py` is imported as the module `app` (not `CDS.app`) — which means **relative imports** (`from . import`) do not work inside it.  Use `CDS.*` absolute imports instead.
+
+### 3. IRIS production worker (`iop --migrate` / `iop` interop)
+
+When an interop production starts, `iop` loads `settings.py` and registers the production classes.  `iop` adds a path entry of its own — the directory containing the settings file:
+
+```text
+/irisdev/app/src/CDS/python/CDS/interop/   ← added by iop when loading settings.py
+```
+
+Combined with the `PYTHONPATH` baseline, the production worker sys.path is:
+
+| Entry              | Path                                       |
+|--------------------|--------------------------------------------|
+| `PYTHONPATH`       | `/irisdev/app/src/CDS/python`              |
+| `PYTHONPATH`       | `/irisdev/app/src/EAI/python`              |
+| iop (settings dir) | `/irisdev/app/src/CDS/python/CDS/interop/` |
+
+Notice that `/irisdev/app/src/CDS/python/CDS/` (the bare `CDS/` directory) is **not** added by iop.  So bare imports like `from routers.X import` or `from models import` would fail with `ModuleNotFoundError`.  Only `CDS.*` imports work here.
+
+`iop --migrate` operates in this same context — running it inside the container is mandatory:
+
+```bash
+docker-compose exec iris python3 -m iop --migrate /irisdev/app/src/CDS/python/CDS/interop/settings.py
+```
+
+Running it on the host Mac fails because the host environment does not have the IRIS Python runtime or the same `sys.path` setup.
+
+### Import rule summary
+
+| Module location        | Loaded by                     | Must use                                                 |
+|------------------------|-------------------------------|----------------------------------------------------------|
+| `CDS/app.py`           | WSGI (as `app`)               | `CDS.*` absolute imports                                 |
+| `CDS/routers/*.py`     | WSGI (via `app`)              | relative `.` imports within routers, `CDS.*` for interop |
+| `CDS/interop/bs/*.py`  | WSGI (via routers `get_bs()`) | `CDS.*`                                                  |
+| `CDS/interop/msg/*.py` | both WSGI and production      | `CDS.*` (safe because `src/CDS/python` is on both paths) |
+| `CDS/interop/bp/*.py`  | production only               | `CDS.*`                                                  |
+| `CDS/interop/bo/*.py`  | production only               | `CDS.*`                                                  |
+
 ## License key file (if any)
 
 Put your InterSystems IRIS license key file in the `key` folder with the name format `iris.<arch>.key` (e.g. `iris.x86_64.key` or `iris.aarch64.key`) before building the image.
@@ -360,3 +478,4 @@ The Dockerfile will copy it to the correct location in the image with the name `
 > ```
 
 See [Managing InterSystems IRIS Licensing](https://docs.intersystems.com/irislatest/csp/docbook/DocBook.UI.Page.cls?KEY=GSA_LICENSE).
+
