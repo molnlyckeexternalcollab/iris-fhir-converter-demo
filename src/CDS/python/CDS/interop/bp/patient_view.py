@@ -34,12 +34,8 @@ from CDS.routers.cds_hooks_models import (
     _MOLNLYCKE_SOURCE,
     build_smart_launch_url,
 )
-from CDS.routers.contexts import PatientViewHookInput
 
 logger = logging.getLogger(__name__)
-
-# Prefetch key registered in the discovery endpoint for patient-view
-_PATIENT_PREFETCH_KEY = "patientToGreet"
 
 
 class PatientView(BusinessProcess):
