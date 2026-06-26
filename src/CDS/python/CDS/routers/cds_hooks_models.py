@@ -213,9 +213,13 @@ class CdsAction(BaseModel):
         ]
     })
 
-    type: Literal["create", "update", "delete"] = Field(description="The type of action being performed. Allowed values are: create, update, delete.")
-    description: str = Field(description="Human-readable description of the suggested action MAY be presented to the end-user.")
-    resource: Optional[Any] = Field(default=None, description="A FHIR resource. When the type attribute is create, the resource attribute SHALL contain a new FHIR resource to be created. For update, this holds the updated resource in its entirety and not just the changed fields. Use of this field to communicate a string of a FHIR id for delete suggestions is DEPRECATED and resourceId SHOULD be used instead.")
+    type: Literal["create", "update", "delete"] = Field(description=("HL7: The type of action being performed. Allowed values are: create, update, delete."
+                                                                    "Epic: For a given resource, confirm the action types supported in the <a href='https://fhir.epic.com/Sandbox'>API Library</a>."))
+    description: str = Field(description=("HL7: Human-readable description of the suggested action MAY be presented to the end-user."
+                                           "Epic: This value is the primary content of the OPA. A CDS Service may return content as plain text."))
+    resource: Optional[Any] = Field(default=None,
+                                    description=("HL7: A FHIR resource. When the type attribute is create, the resource attribute SHALL contain a new FHIR resource to be created. For update, this holds the updated resource in its entirety and not just the changed fields. Use of this field to communicate a string of a FHIR id for delete suggestions is DEPRECATED and resourceId SHOULD be used instead."
+                                                 "Epic: The FHIR resource provided by the CDS Service representing the action to be suggested to the user. Check the <a href='https://fhir.epic.com/Sandbox'>API Library</a> to see what resources (and action types) are supported."))
     resourceId: Optional[str] = Field(default=None, description="A relative reference to the relevant resource. SHOULD be provided when the type attribute is delete.")
 
     @model_validator(mode="after")
@@ -246,10 +250,14 @@ class CdsSuggestion(BaseModel):
 
     See: <a href="https://cds-hooks.hl7.org/#suggestion">CDS Hooks Suggestion</a>
     """
-    label: str = Field(description="Human-readable label to display for this suggestion (e.g. the CDS Client might render this as the text on a button tied to this suggestion).")
-    uuid: Optional[str] = Field(default=None, description="Unique identifier, used for auditing and logging suggestions.")
-    isRecommended: Optional[bool] = Field(default=None, description="When there are multiple suggestions, allows a service to indicate that a specific suggestion is recommended from all the available suggestions on the card. CDS Hooks clients may choose to influence their UI based on this value, such as pre-selecting, or highlighting recommended suggestions. Multiple suggestions MAY be recommended, if card.selectionBehavior is any.")
-    actions: Optional[list[CdsAction]] = Field(default=None, description="Array of objects, each defining a suggested action. Within a suggestion, all actions are logically AND'd together, such that a user selecting a suggestion selects all of the actions within it. When a suggestion contains multiple actions, the actions SHOULD be processed as per FHIR's rules for processing transactions with the CDS Client's fhirServer as the base url for the inferred full URL of the transaction bundle entries. (Specifically, deletes happen first, then creates, then updates).")
+    label: str = Field(description=("HL7: Human-readable label to display for this suggestion (e.g. the CDS Client might render this as the text on a button tied to this suggestion)."
+                                     "Epic: This field is not used, but is required."))
+    uuid: Optional[str] = Field(default=None, description=("HL7: Unique identifier, used for auditing and logging suggestions."
+                                                           "Epic: This field is optional. However, it is required if you intend to receive feedback."))
+    isRecommended: Optional[bool] = Field(default=None, description=("HL7: When there are multiple suggestions, allows a service to indicate that a specific suggestion is recommended from all the available suggestions on the card. CDS Hooks clients may choose to influence their UI based on this value, such as pre-selecting, or highlighting recommended suggestions. Multiple suggestions MAY be recommended, if card.selectionBehavior is any."
+                                                                     "Epic: In Epic, this is used to control whether the suggested action is pre-selected or not."))
+    actions: Optional[list[CdsAction]] = Field(default=None, description=("HL7: Array of objects, each defining a suggested action. Within a suggestion, all actions are logically AND'd together, such that a user selecting a suggestion selects all of the actions within it. When a suggestion contains multiple actions, the actions SHOULD be processed as per FHIR's rules for processing transactions with the CDS Client's fhirServer as the base url for the inferred full URL of the transaction bundle entries. (Specifically, deletes happen first, then creates, then updates)."
+                                                                          "Epic: Epic only supports a single action per suggestion."))
 
 
 class CdsLink(BaseModel):
