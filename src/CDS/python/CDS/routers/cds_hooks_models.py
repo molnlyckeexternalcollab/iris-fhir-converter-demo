@@ -5,6 +5,8 @@ import os
 from typing import Any, Literal, Optional
 from urllib.parse import urlencode, urlparse, urlunparse
 
+import re
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 logger = logging.getLogger(__name__)
@@ -293,25 +295,48 @@ class CdsCard(BaseModel):
         ]
     })
 
-    uuid: Optional[str] = Field(default=None, description="Unique identifier of the card. MAY be used for auditing and logging cards and SHALL be included in any subsequent calls to the CDS service's feedback endpoint.")
+    uuid: Optional[str] = Field(default=None,
+                                description=("HL7:Unique identifier of the card. MAY be used for auditing and logging cards and SHALL be included in any subsequent calls to the CDS service's feedback endpoint."
+                                             "Epic: Unique identifier, used for auditing and logging suggestions. This field is optional. However, it is required if you intend to receive feedback."))
     summary: str = Field(max_length=140, description="One-sentence, <140-character summary message for display to the user inside of this card.")
-    detail: Optional[str] = Field(default=None, description="Optional detailed information to display; if provided MUST be represented in <a href='https://github.github.com/gfm/'>(GitHub Flavored) Markdown</a>. (For non-urgent cards, the CDS Client MAY hide these details until the user clicks a link like 'view more details…').")
-    indicator: Literal["info", "warning", "critical"] = Field(default='info', description="Urgency/importance of what this card conveys. Allowed values, in order of increasing urgency, are: info, warning, critical. The CDS Client MAY use this field to help make UI display decisions such as sort order or coloring.")
-    source: CdsSource = Field(description="Grouping structure for the Source of the information displayed on this card. The source should be the primary source of guidance for the decision support the card represents.")
+    detail: Optional[str] = Field(default=None,
+                                  description=("HL7: Optional detailed information to display; if provided MUST be represented in <a href='https://github.github.com/gfm/'>(GitHub Flavored) Markdown</a>. (For non-urgent cards, the CDS Client MAY hide these details until the user clicks a link like 'view more details…')."
+                                               "Epic: A CDS Service may return content as mere plain text, as GitHub flavored markdown, or, with an Epic-specific extension, as html. (See \"com.epic.cdshooks.card.detail.content-type\" extension, below)."))
+    indicator: Literal["info", "warning", "critical"] = Field(default='info',
+                                                              description=("HL7: Urgency/importance of what this card conveys. Allowed values, in order of increasing urgency, are: info, warning, critical. The CDS Client MAY use this field to help make UI display decisions such as sort order or coloring."
+                                                                           "Epic: The info, warning, and critical values can be mapped to Epic-specific values by the Epic application team for display."))
+    source: CdsSource = Field(description=("HL7: Grouping structure for the Source of the information displayed on this card. The source should be the primary source of guidance for the decision support the card represents. "
+                                           "Epic: Epic only supports alpha-numeric strings as the code of source.topic, for example: \"Card123\" or \"869e7c5587e04d0da96a60a84b5b8eac\". The value returned in source.topic.code is used for logging and auditing, and is returned to the CDS Service in the feedback request. **Maximum Length: 100 Characters**. Source.topic.code should be a static identifier representing the particular topic of a card. When an end user overrides a given card, their acknowledgment is associated with this identifier. If you want the end user's override to be respected on subsequent requests to your CDS service, the topic identifier should remain static if sending the same card content."))
     suggestions: Optional[list[CdsSuggestion]] = Field(default=None, description="Allows a service to suggest a set of changes in the context of the current activity (e.g. changing the dose of a medication currently being prescribed, for the order-sign activity). If suggestions are present, selectionBehavior MUST also be provided.")
-    selectionBehavior: Optional[Literal["at-most-one", "any"]] = Field(default=None, description="Describes the intended selection behavior of the suggestions in the card. Allowed values are: at-most-one, indicating that the user may choose none or at most one of the suggestions; any, indicating that the end user may choose any number of suggestions including none of them and all of them. CDS Clients that do not understand the value MUST treat the card as an error. REQUIRED when suggestions are present.")
+    selectionBehavior: Optional[Literal["at-most-one", "any"]] = Field(default=None,
+                                                                       description=("HL7: Describes the intended selection behavior of the suggestions in the card. Allowed values are: at-most-one, indicating that the user may choose none or at most one of the suggestions; any, indicating that the end user may choose any number of suggestions including none of them and all of them. CDS Clients that do not understand the value MUST treat the card as an error. REQUIRED when suggestions are present."
+                                                                                    "Epic: Only the value \"any\" is currently supported."))
     overrideReasons: Optional[list[Coding]] = Field(default=None, description="Override reasons can be selected by the end user when overriding a card without taking the suggested recommendations. The CDS service MAY return a list of override reasons to the CDS client. If override reasons are present, the CDS Service MUST populate a display value for each reason's Coding. The CDS Client SHOULD present these reasons to the clinician when they dismiss a card. A CDS Client MAY augment the override reasons presented to the user with its own reasons.")
-    links: Optional[list[CdsLink]] = Field(default=None, description="Allows a service to suggest a link to an app that the user might want to run for additional information or to help guide a decision.")
+    links: Optional[list[CdsLink]] = Field(default=None,
+                                           description=("HL7: Allows a service to suggest a link to an app that the user might want to run for additional information or to help guide a decision."
+                                                        "Epic: Allows your service to suggest a link to a user for additional information or a SMART app. Allowed links are allow-listed by the health system."))
 
     @model_validator(mode="after")
-    def selection_behavior_required_with_suggestions(self) -> "CdsCard":
-        """Per CDS Hooks spec: selectionBehavior is REQUIRED when suggestions are present."""
+    def validate_card_constraints(self) -> "CdsCard":
+        """Enforce CDS Hooks spec and Epic-specific card constraints."""
+        # HL7: selectionBehavior is REQUIRED when suggestions are present.
         if self.suggestions and self.selectionBehavior is None:
             raise ValueError(
                 "selectionBehavior is required when suggestions are present "
                 '(spec: https://cds-hooks.hl7.org/#card-attributes). '
                 'Use "at-most-one" or "any".'
             )
+        # Epic: source.topic.code must be alphanumeric and ≤ 100 characters.
+        if self.source.topic is not None:
+            code = self.source.topic.code
+            if len(code) > 100:
+                raise ValueError(
+                    "source.topic.code must be at most 100 characters (Epic constraint)."
+                )
+            if not re.fullmatch(r"[A-Za-z0-9]+", code):
+                raise ValueError(
+                    f"source.topic.code must be alphanumeric only (Epic constraint): got {code!r}."
+                )
         return self
 
 
