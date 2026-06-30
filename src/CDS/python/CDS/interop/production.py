@@ -37,28 +37,28 @@ prod = Production(
 )
 
 # Define services
-hapi_service = prod.service('Hapi', BSHapi)
-patient_view_service = prod.service('PatientView', BSPatientView)
-order_select_service = prod.service('OrderSelect', BSOrderSelect)
-order_sign_service = prod.service('OrderSign', BSOrderSign)
+hapi_service = prod.service('BS.Hapi', BSHapi)
+patient_view_service = prod.service('BS.PatientView', BSPatientView)
+order_select_service = prod.service('BS.OrderSelect', BSOrderSelect)
+order_sign_service = prod.service('BS.OrderSign', BSOrderSign)
 
 # Define processes
-hapi_process = prod.process('Hapi', BPHapi)
-patient_view_process = prod.process('PatientView', BPPatientView)
-order_select_process = prod.process('OrderSelect', BPOrderSelect)
-order_sign_process = prod.process('OrderSign', BPOrderSign)
+hapi_process = prod.process('BP.Hapi', BPHapi)
+patient_view_process = prod.process('BP.PatientView', BPPatientView)
+order_select_process = prod.process('BP.OrderSelect', BPOrderSelect)
+order_sign_process = prod.process('BP.OrderSign', BPOrderSign)
 
 # Define operations
-hapi_operation = prod.operation('Hapi', BOHapi)
-fhir_operation = prod.operation('Fhir', BOFhir)
+hapi_operation = prod.operation('BO.Hapi', BOHapi)
+fhir_operation = prod.operation('BO.Fhir', BOFhir)
 
 
 # Connect the conversion pipeline
-prod.connect(hapi_service, hapi_process)
+prod.connect(hapi_service.process_target, hapi_process)
 
-prod.connect(patient_view_service, patient_view_process)
-prod.connect(order_select_service, order_select_process)
-prod.connect(order_sign_service, order_sign_process)
+prod.connect(patient_view_service.process_target, patient_view_process)
+prod.connect(order_select_service.process_target, order_select_process)
+prod.connect(order_sign_service.process_target, order_sign_process)
 
 prod.connect(patient_view_process.hapi_target, hapi_process)
 prod.connect(patient_view_process.fhir_target, fhir_operation)

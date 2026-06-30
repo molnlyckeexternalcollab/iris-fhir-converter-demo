@@ -10,7 +10,7 @@ _bs = None
 def get_bs():
     global _bs
     if _bs is None:
-        _bs = Director.create_python_business_service('PatientView')
+        _bs = Director.create_python_business_service('BS.PatientView')
     return _bs
 
 
