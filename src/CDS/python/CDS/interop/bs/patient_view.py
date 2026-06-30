@@ -10,12 +10,12 @@ _bs = None
 def get_bs():
     global _bs
     if _bs is None:
-        _bs = Director.create_python_business_service('BS.PatientView')
+        _bs = Director.create_python_business_service('PatientView')
     return _bs
 
 
 class PatientView(BusinessService):
     def on_process_input(self, message_input: PatientViewHookInput) -> PatientViewResponse:
         msg = PatientViewInputRequest(input=message_input)
-        response: PatientViewResponse = self.send_request_sync('BP.PatientView', msg)
+        response: PatientViewResponse = self.send_request_sync('PatientView', msg)
         return response

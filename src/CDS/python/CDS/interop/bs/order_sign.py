@@ -10,12 +10,12 @@ _bs = None
 def get_bs():
     global _bs
     if _bs is None:
-        _bs = Director.create_python_business_service('BS.OrderSign')
+        _bs = Director.create_python_business_service('OrderSign')
     return _bs
 
 
 class OrderSign(BusinessService):
     def on_process_input(self, message_input: OrderSignHookInput) -> OrderSignResponse:
         msg = OrderSignRequest(input=message_input)
-        response: OrderSignResponse = self.send_request_sync('BP.OrderSign', msg)
+        response: OrderSignResponse = self.send_request_sync('OrderSign', msg)
         return response

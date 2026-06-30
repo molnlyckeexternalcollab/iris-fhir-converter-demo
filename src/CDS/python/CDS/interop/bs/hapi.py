@@ -12,12 +12,12 @@ _bs = None
 def get_bs():
     global _bs
     if _bs is None:
-        _bs = Director.create_python_business_service('BS.Hapi')
+        _bs = Director.create_python_business_service('Hapi')
     return _bs
 
 
 class Hapi(BusinessService):
     def on_process_input(self, message_input: RiskAssessmentInput) -> RiskCalculationResult:
         msg = RiskAssessmentInputRequest(input=message_input)
-        response: RiskAssessmentResultResponse = self.send_request_sync('BP.Hapi', msg)
+        response: RiskAssessmentResultResponse = self.send_request_sync('Hapi', msg)
         return response.result
