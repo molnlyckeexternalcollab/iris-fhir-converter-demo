@@ -1,6 +1,6 @@
 """Business Service — HAPI risk calculator endpoint."""
 
-from iop import BusinessService, Director
+from iop import BusinessService, Director, target
 from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 from CDS.models import RiskAssessmentInput, RiskCalculationResult
 
@@ -17,7 +17,10 @@ def get_bs():
 
 
 class Hapi(BusinessService):
+    
+    process_target = target('Process') 
+
     def on_process_input(self, message_input: RiskAssessmentInput) -> RiskCalculationResult:
         msg = RiskAssessmentInputRequest(input=message_input)
-        response: RiskAssessmentResultResponse = self.send_request_sync('Hapi', msg)
+        response: RiskAssessmentResultResponse = self.send_request_sync(self.process_target, msg)
         return response.result

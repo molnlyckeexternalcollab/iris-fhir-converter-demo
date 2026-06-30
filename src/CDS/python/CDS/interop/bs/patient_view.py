@@ -1,6 +1,6 @@
 """Business Service — patient-view CDS hook."""
 
-from iop import BusinessService, Director
+from iop import BusinessService, Director, target
 from CDS.routers.contexts import PatientViewHookInput
 from CDS.interop.msg.cds_hooks import PatientViewInputRequest, PatientViewResponse
 
@@ -15,7 +15,10 @@ def get_bs():
 
 
 class PatientView(BusinessService):
+    
+    process_target = target('Process') 
+
     def on_process_input(self, message_input: PatientViewHookInput) -> PatientViewResponse:
         msg = PatientViewInputRequest(input=message_input)
-        response: PatientViewResponse = self.send_request_sync('PatientView', msg)
+        response: PatientViewResponse = self.send_request_sync(self.process_target, msg)
         return response

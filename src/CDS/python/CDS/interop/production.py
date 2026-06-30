@@ -54,5 +54,11 @@ fhir_operation = prod.operation('Fhir', BOFhir)
 
 
 # Connect the conversion pipeline
+prod.connect(hapi_service, hapi_process)
+
+prod.connect(patient_view_service, patient_view_process)
+prod.connect(order_select_service, order_select_process)
+prod.connect(order_sign_service, order_sign_process)
+
 prod.connect(patient_view_process.hapi_target, hapi_process)
 prod.connect(patient_view_process.fhir_target, fhir_operation)

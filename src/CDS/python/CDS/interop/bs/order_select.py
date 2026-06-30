@@ -1,6 +1,6 @@
 """Business Service — order-select CDS hook."""
 
-from iop import BusinessService, Director
+from iop import BusinessService, Director, target
 from CDS.interop.msg.cds_hooks import OrderSelectRequest, OrderSelectResponse
 from CDS.routers.contexts import OrderSelectHookInput
 
@@ -15,7 +15,10 @@ def get_bs():
 
 
 class OrderSelect(BusinessService):
+    
+    process_target = target('Process')
+
     def on_process_input(self, message_input: OrderSelectHookInput) -> OrderSelectResponse:
         msg = OrderSelectRequest(input=message_input)
-        response: OrderSelectResponse = self.send_request_sync('OrderSelect', msg)
+        response: OrderSelectResponse = self.send_request_sync(self.process_target, msg)
         return response
