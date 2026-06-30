@@ -15,6 +15,11 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
+# asyncio logs "Using selector: EpollSelector" at DEBUG level to stdout.
+# Under IRIS WSGI, stdout is captured as part of the HTTP response body,
+# which corrupts JSON responses. Suppress asyncio debug noise.
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
 app = FastAPI(
     title="CDS Service",
     description="Mock EHR/integration APIs for EMIL POC",

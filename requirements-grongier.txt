@@ -1,8 +1,8 @@
 # grongier: Interoperability On Python (IoP) proof of concept
-iris-pex-embedded-python<4.0.0
+iris-pex-embedded-python
 # grongier: This is a module that wraps embedded python in the IRIS Dataplatform. It provides a simple interface to run python code in IRIS.    
-iris-embedded-python-wrapper==0.5.15b3
+iris-embedded-python-wrapper
 # grongier: Provides a python implementation of FHIR-Converter written in C#.
-python-fhir-converter @ https://github.com/grongierisc/fhir-converter/releases/download/v0.5.3/python_fhir_converter-0.5.3-py3-none-any.whl
+python-fhir-converter @ https://github.com/grongierisc/fhir-converter/releases/download/v0.6.0/python_fhir_converter-0.6.0-py3-none-any.whl
 # grongier: A flexible Python-based strategy for customizing InterSystems IRIS FHIR Server behavior using decorators.
 iris-fhir-python-strategy @ git+https://github.com/grongierisc/iris-fhir-python-strategy@v0.2.0

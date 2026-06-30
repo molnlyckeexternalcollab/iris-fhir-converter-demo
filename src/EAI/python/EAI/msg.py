@@ -1,47 +1,51 @@
-from grongier.pex import Message
-from dataclasses import dataclass
-from obj import PermissionObj
-from typing import List
+"""Message definitions for FHIR conversion pipeline.
 
-@dataclass
-class GetPermissionRequest(Message):
-    scopes: list
+All messages are dataclass-based for serialization and type safety.
+"""
 
-@dataclass
-class PermissionResponse(Message):
-    permissions: List[PermissionObj] = None
+from dataclasses import dataclass, field
+from typing import Optional
 
-@dataclass
-class FilterResource(Message):
-    permissions: List[PermissionObj] = None
-    resource_str: str = None
-
+from iop import Message
 
 @dataclass
 class FhirConverterMessage(Message):
+    """Request to convert HL7v2 message to FHIR."""
     input_filename: str
     input_data: str
-    input_data_type: str
-    root_template: str
+    input_data_type: str = 'Hl7v2'
+    root_template: str = 'ADT_CUSTOM'
+
 
 @dataclass
 class FhirConverterResponse(Message):
+    """Response containing converted FHIR Bundle."""
     status: int
     output_data: str
     output_filename: str
 
 
 @dataclass
+class FhirFileDropResponse(Message):
+    """Response containing the created file path for dropped FHIR payload."""
+    status: int
+    file_path: str
+
+
+@dataclass
 class FhirRequest(Message):
-    url: str
-    resource: str
-    method: str
-    data: str
-    headers: dict
+    """HTTP request to FHIR server."""
+    url: Optional[str] = None
+    resource: Optional[str] = None
+    method: str = 'POST'
+    data: str = ''
+    headers: dict = field(default_factory=dict)
+
 
 @dataclass
 class FhirResponse(Message):
+    """HTTP response from FHIR server."""
     status_code: int
     content: str
-    headers: dict
-    resource: str
+    headers: dict = field(default_factory=dict)
+    resource: str = ''

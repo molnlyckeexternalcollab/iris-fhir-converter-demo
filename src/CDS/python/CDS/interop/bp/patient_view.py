@@ -15,7 +15,7 @@ import logging
 from datetime import date
 from typing import Any, Optional
 
-from iop import BusinessProcess
+from iop import BusinessProcess, target
 
 from CDS.models import RiskAssessmentInput
 from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
@@ -39,6 +39,10 @@ logger = logging.getLogger(__name__)
 
 
 class PatientView(BusinessProcess):
+
+    hapi_target = target()
+    fhir_target = target()
+
     def on_patient_view_request_message(
         self, request: PatientViewInputRequest
     ) -> PatientViewResponse:
@@ -57,7 +61,7 @@ class PatientView(BusinessProcess):
 
         # --- Step 3: calculate risk via BP.Hapi ---
         hapi_msg = RiskAssessmentInputRequest(input=hapi_input)
-        result_msg: RiskAssessmentResultResponse = self.send_request_sync("BP.Hapi", hapi_msg)
+        result_msg: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_target, hapi_msg)
         risk = result_msg.result
 
         logger.info(
@@ -202,7 +206,7 @@ class PatientView(BusinessProcess):
             else None
         )
         fhir_response = self.send_request_sync(
-            "BO.Fhir",
+            self.fhir_target,
             FhirReadRequest(
                 fhir_server=hook_request.fhirServer,
                 resource_type="Patient",

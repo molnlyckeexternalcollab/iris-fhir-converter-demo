@@ -2,7 +2,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "objectscript.conn": {
-        "active": false,
+        "active": true,
         "host": "localhost",
         "port": 8081,
         "username": "SuperUser",

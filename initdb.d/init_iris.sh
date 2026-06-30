@@ -51,7 +51,7 @@ fi
 if [ -n "$IOP_CMD" ]; then
     printf '[  OK  ] Running iop command to import additional configuration...\n'
     $IOP_CMD --init --namespace EAI
-    $IOP_CMD --namespace EAI --migrate "$APP_HOME/src/EAI/python/EAI/settings.py"
+    $IOP_CMD --namespace EAI --migrate "$APP_HOME/src/EAI/python/settings.py"
     $IOP_CMD --init --namespace CDS
     $IOP_CMD --namespace CDS --migrate "$APP_HOME/src/CDS/python/CDS/interop/settings.py"
 fi

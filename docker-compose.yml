@@ -12,8 +12,6 @@ services:
       - FHIR_SERVER_VERSION=${FHIR_SERVER_VERSION}
       - FHIR_SERVER_PATH=${FHIR_SERVER_PATH}
       - FHIR_SERVER_STRATEGY=${FHIR_SERVER_STRATEGY}
-      # - FHIR_CUSTOMIZATION_PATH=${APP_HOME}/src/FHIRSERVER/python
-      # - FHIR_CUSTOMIZATION_MODULE=custom_decorators
     hostname: iris
     networks:
       - iris-fhir-converter-demo

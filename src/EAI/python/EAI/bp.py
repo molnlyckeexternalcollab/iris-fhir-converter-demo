@@ -1,58 +1,99 @@
+"""Business Processes for HL7v2 → FHIR conversion pipeline."""
+
 import os
 import json
 import uuid
 from datetime import date, datetime, timezone
 
-from iop import BusinessProcess
+from iop import BusinessProcess, target
 import iris
+
+from EAI.msg import FhirRequest, FhirConverterMessage, FhirConverterResponse
 import jwt
 
 from fhir.resources.codeableconcept import CodeableConcept
 from fhir.resources.coding import Coding
 from fhir.resources.reference import Reference
 from fhir.resources.riskassessment import RiskAssessment, RiskAssessmentPrediction
-from msg import FhirRequest, FhirConverterMessage
 from CDS.models import RiskAssessmentInput, RiskCalculationResult
 from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 
 class FhirConverterProcess(BusinessProcess):
-    def on_enslib_message(self, request: 'iris.EnsLib.HL7.Message'):
-        fcm = FhirConverterMessage(
-            input_filename=os.path.basename(request.Source),
-            input_data=request.RawContent,
-            input_data_type='Hl7v2',
-            root_template=request.Name
-        )
-        self.on_fhir_converter_message(fcm)
+    """Routes HL7v2 messages through FHIR conversion and submission."""
 
-    def on_fhir_converter_message(self, request: FhirConverterMessage):
-        # force template
-        request.root_template = 'ADT_CUSTOM' if request.root_template == 'ADT_Z99' else request.root_template
-        # send this message to the FhirConverterOperation
-        response = self.send_request_sync("Python.FhirConverterOperation", request)
-        response.output_filename = request.input_filename.replace('.hl7', '.json')
+    converter_target = target()
+    file_target = target()
+    fhir_target = target()
+    cds_hapi_risk_target = target()
 
-        # Enhance the converted FHIR bundle with a HAPI pressure injury RiskAssessment
+    def on_enslib_message(self, request: 'iris.EnsLib.HL7.Message') -> None:
+        """
+        Handle native IRIS HL7 message.
+        
+        Args:
+            request: Native IRIS HL7 message
+        """
         try:
-            fhir_data = json.loads(response.output_data)
-            hapi_input, patient_ref = self._extract_hapi_input(fhir_data)
-            risk_request = RiskAssessmentInputRequest(input=hapi_input)
-            risk_response: RiskAssessmentResultResponse = self.send_request_sync("CdsHapiRiskOperation", risk_request)
-            risk_assessment = self._build_risk_assessment(risk_response.result, patient_ref)
-            fhir_data = self._add_to_bundle(fhir_data, risk_assessment)
-            response.output_data = json.dumps(fhir_data)
-        except Exception as e:
-            self.log_warning(f"HAPI risk enhancement failed, sending original bundle: {e}")
+            fcm = FhirConverterMessage(
+                input_filename=os.path.basename(request.Source),
+                input_data=request.RawContent,
+                input_data_type='Hl7v2',
+                root_template=request.Name
+            )
+            converted_rsp: FhirConverterResponse = self.submit_fhir_converter_message(fcm)
 
-        # send this to the FHIR server
-        fhir_request = FhirRequest(
-            url='https://webgateway',
-            resource='fhir/r4/',
-            method='POST',
-            data=response.output_data,
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json+fhir'}
+            # Enhance the converted FHIR bundle with a HAPI pressure injury RiskAssessment
+            try:
+                fhir_data = json.loads(converted_rsp.output_data)
+                hapi_input, patient_ref = self._extract_hapi_input(fhir_data)
+                risk_request = RiskAssessmentInputRequest(input=hapi_input)
+                risk_response: RiskAssessmentResultResponse = self.send_request_sync(self.cds_hapi_risk_target, risk_request)
+                risk_assessment = self._build_risk_assessment(risk_response.result, patient_ref)
+                fhir_data = self._add_to_bundle(fhir_data, risk_assessment)
+                converted_rsp.output_data = json.dumps(fhir_data)
+            except Exception as e:
+                self.log_warning(f"HAPI risk enhancement failed, sending original bundle: {e}")
+
+            # send this to the FHIR server
+            fhir_request = FhirRequest(
+                url='https://webgateway',
+                resource='fhir/r4/',
+                method='POST',
+                data=converted_rsp.output_data,
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json+fhir'}
+            )
+
+            # Drop converted payload to misc/data/fhir via dedicated operation.
+            self.send_request_sync(self.file_target, converted_rsp)
+            self.send_request_sync(self.fhir_target, fhir_request)
+
+
+        except Exception as e:
+            self.log_error(f'Failed to process HL7 message: {str(e)}')
+            raise
+
+    def submit_fhir_converter_message(self, request: FhirConverterMessage) -> FhirConverterResponse:
+        """
+        Submit message to converter, then post result to FHIR server.
+        
+        Args:
+            request: FhirConverterMessage with HL7 data
+        """
+        # Normalize template names (force custom template for ADT_Z99)
+        request.root_template = (
+            'ADT_CUSTOM' if request.root_template == 'ADT_Z99'
+            else request.root_template
         )
-        self.send_request_sync("FHIR_PYTHON_HTTP", fhir_request)
+
+        # Convert HL7v2 to FHIR
+        response: FhirConverterResponse = self.send_request_sync(
+            self.converter_target,
+            request
+        )
+        response.output_filename = request.input_filename.replace('.hl7', '.json')
+        self.log_info(f'Converted {request.input_filename} → {response.output_filename}')
+
+        return response
 
     def _extract_hapi_input(self, fhir_data: dict) -> tuple:
         """Extract patient data from a FHIR Bundle/Patient for HAPI risk input.
