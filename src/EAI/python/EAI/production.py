@@ -43,7 +43,7 @@ fhir_http_op = prod.operation(
 
 file_drop_op = prod.operation(FhirFileDropOperation)
 
-cds_http_op = prod.operation('CdsHapiRiskOperation', HttpOperation)
+hapi_risk_operation = prod.operation('HapiRiskOperation', HttpOperation)
 
 # Define processes
 converter_proc = prod.process(FhirConverterProcess)
@@ -79,5 +79,5 @@ hl7_tcp_service = prod.service(
 prod.connect(converter_proc.converter_target, converter_op)
 prod.connect(converter_proc.file_target, file_drop_op)
 prod.connect(converter_proc.fhir_target, fhir_http_op)
-prod.connect(converter_proc.cds_hapi_risk_target, cds_http_op)
+prod.connect(converter_proc.hapi_risk_target, hapi_risk_operation)
 
