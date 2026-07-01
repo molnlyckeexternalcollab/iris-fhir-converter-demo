@@ -465,6 +465,11 @@ Running it on the host Mac fails because the host environment does not have the 
 | `CDS/interop/bp/*.py`  | production only               | `CDS.*`                                                  |
 | `CDS/interop/bo/*.py`  | production only               | `CDS.*`                                                  |
 
+The rule: any file inside CDS/interop/ that is loaded by iop (i.e. settings.py and production.py) must use bare imports relative to the CDS/interop/ root, because that directory is the import root iop sets up.
+Files outside CDS/interop/ (the bs/bp/bo modules themselves, app.py, routers) must use CDS.* imports since they run under WSGI/PYTHONPATH which has python on the path.
+A production can only reference classes whose __module__ is resolvable from that production's settings.py directory. Cross-namespace class references in a single production don't work.
+
+
 ## License key file (if any)
 
 Put your InterSystems IRIS license key file in the `key` folder with the name format `iris.<arch>.key` (e.g. `iris.x86_64.key` or `iris.aarch64.key`) before building the image.
