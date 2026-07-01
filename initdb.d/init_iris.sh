@@ -54,4 +54,6 @@ if [ -n "$IOP_CMD" ]; then
     $IOP_CMD --namespace EAI --migrate "$APP_HOME/src/EAI/python/settings.py"
     $IOP_CMD --init --namespace CDS
     $IOP_CMD --namespace CDS --migrate "$APP_HOME/src/CDS/python/CDS/interop/settings.py"
+    $IOP_CMD --init --namespace DSE
+    $IOP_CMD --namespace DSE --migrate "$APP_HOME/src/DSE/python/DSE/interop/settings.py"
 fi

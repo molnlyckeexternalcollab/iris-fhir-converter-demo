@@ -33,7 +33,7 @@
 
     zn "EAI"
 
-    # Install a FHIR Adapter, see https://docs.intersystems.com/irisforhealth20261/csp/docbook/DocBook.UI.Page.cls?KEY=HXFHIRPROD_fhir_adapter#HXFHIRPROD_fhir_adapter_install_noOAuth
+    // Install a FHIR Adapter, see https://docs.intersystems.com/irisforhealth20261/csp/docbook/DocBook.UI.Page.cls?KEY=HXFHIRPROD_fhir_adapter#HXFHIRPROD_fhir_adapter_install_noOAuth
     zw ##class(HS.FHIRServer.Installer).InteropAdapterConfig("/proxy/fhir")
 
     set service = ##class(HS.Registry.Service.HTTP).%New()
@@ -46,6 +46,12 @@
 
     zn "HSLIB"
 
+    // HL7 CDS Hooks server implementation with support for Epic nuances
+    // See https://fhir.epic.com/Documentation?docId=cds-hooks
+    // https://cds-hooks.hl7.org/
     Do ##class(HS.Util.Installer.Foundation).Install("CDS")
+
+    // Decision Support Engine
+    Do ##class(HS.Util.Installer.Foundation).Install("DSE")
 
     halt
