@@ -3,7 +3,6 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-from CDS.routers.hapi import router as hapi_router
 from CDS.routers.cds_services import router as cds_services_router
 from CDS.routers.patient_view import router as patient_view_router
 from CDS.routers.order_select import router as order_select_router
@@ -37,7 +36,6 @@ async def debug_exception_handler(request: Request, exc: Exception):
     """
     return PlainTextResponse(traceback.format_exc(), status_code=500)
 
-app.include_router(hapi_router)
 app.include_router(cds_services_router)
 app.include_router(patient_view_router)
 app.include_router(order_select_router)

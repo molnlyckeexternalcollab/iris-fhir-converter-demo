@@ -17,8 +17,8 @@ from typing import Any, Optional
 
 from iop import BusinessProcess, target
 
-from CDS.models import RiskAssessmentInput
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.models import RiskAssessmentInput
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 from CDS.interop.msg.cds_hooks import (
     FhirReadRequest,
     PatientViewInputRequest,
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class PatientView(BusinessProcess):
 
-    hapi_target = target()
+    hapi_risk_target = target()
     fhir_target = target()
 
     def on_patient_view_request_message(
@@ -60,9 +60,9 @@ class PatientView(BusinessProcess):
         hapi_input = self._build_hapi_input(patient)
 
         # --- Step 3: calculate risk via BP.Hapi ---
-        hapi_msg = RiskAssessmentInputRequest(input=hapi_input)
-        result_msg: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_target, hapi_msg)
-        risk = result_msg.result
+        risk_request = RiskAssessmentInputRequest(input=hapi_input)
+        risk_response: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_risk_target, risk_request)
+        risk = risk_response.result
 
         logger.info(
             "HAC PI risk for patient %s: %.1f%% (CI %.1f%%–%.1f%%, category=%s)",
@@ -107,7 +107,7 @@ class PatientView(BusinessProcess):
                     f"**HAC PI Risk Score: {risk.risk_percentage:.1f}% "
                     f"(CI: {risk.ci_lower:.1f}%–{risk.ci_upper:.1f}%)**\n\n"
                     "Accepting this suggestion will create a SupplyRequest for "
-                    "Mepilex Border Heel 22×23cm."
+                    "Mepilex Border Heel 22x23cm."
                 ),
                 indicator=indicator,
                 source=CdsSource(**_MOLNLYCKE_SOURCE),
