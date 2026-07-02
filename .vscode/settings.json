@@ -2,16 +2,44 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "objectscript.conn": {
-        "active": true,
+        "active": false,
         "host": "localhost",
         "port": 8081,
         "username": "SuperUser",
         "password": "SYS",
-        "ns": "FHIRSERVER"
+        "ns": "FHIRSERVER",
+        "links": {
+            "FHIR Dashboard": "http://localhost:${port}/csp/fhir-management/home",
+            "EAI Production": "http://localhost:${port}/csp/healthshare/eai/EnsPortal.ProductionConfig.zen"
+        },
+        "server": "server"
     },
     // Set java classpath
     "java.project.referencedLibraries": [
         "./src/FHIRSERVER/java/lib/validator_cli.jar"
     ],
-    "fhirConverter.pythonCli": "/Users/grongier/git/iris-fhir-converter-demo/.venv/bin/fhir_converter_hl7v2"
+    "intersystems.servers": {
+        "server": {
+            "webServer": {
+                "scheme": "http",
+                "host": "localhost",
+                "port": 8081
+            },
+            "description": "Iris server",
+            "username": "SuperUser",
+            "password": "SYS",
+        }
+    },
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:pyenv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
+    "python.analysis.extraPaths": [
+        "./src/CDS/python",
+        "./src/EAI/python",
+        "./src/DSE/python"
+    ]
 }

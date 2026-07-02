@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "Local CDS server",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${command:python.interpreterPath}",
+        "program": "${workspaceFolder}/src/CDS/python/CDS/app.py",
+        "stopOnEntry": false,
+        "justMyCode": false,
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/CDS/python:${workspaceFolder}/src/EAI/python"
+        },
+        "args": []
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 """Business Operations for FHIR conversion and HTTP interactions."""
 
 import os
+import json
 from pathlib import Path
 
 import requests
@@ -9,7 +10,7 @@ from fhir_converter.renderers import Hl7v2Renderer, make_environment, hl7v2_defa
 
 from iop import BusinessOperation
 
-from .msg import (
+from EAI.msg import (
     FhirConverterMessage,
     FhirConverterResponse,
     FhirFileDropResponse,
@@ -17,6 +18,8 @@ from .msg import (
     FhirResponse
 )
 
+from DSE.models import RiskCalculationResult
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 
 class FhirConverterOperation(BusinessOperation):
     """Converts HL7v2 messages to FHIR using Liquid templates."""
@@ -129,6 +132,20 @@ class FhirFileDropOperation(BusinessOperation):
 
         return FhirFileDropResponse(status=200, file_path=str(file_path))
 
+class HttpOperation(BusinessOperation):
+    # Direct IRIS port — bypasses webgateway, no TLS for internal calls
+    url = 'http://localhost:52773/dse/hapi'
+
+    def on_risk_assessment_input_request(self, request: RiskAssessmentInputRequest) -> RiskAssessmentResultResponse:
+        response = requests.post(
+            self.url,
+            json=json.loads(request.input.model_dump_json()),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            timeout=10
+        )
+        response.raise_for_status()
+        result = RiskCalculationResult.model_validate(response.json())
+        return RiskAssessmentResultResponse(result=result)
 
 class FhirHttpOperation(BusinessOperation):
     """Posts FHIR resources to FHIR server via HTTP."""

@@ -1,0 +1,24 @@
+"""Business Service — patient-view CDS hook."""
+
+from iop import BusinessService, Director, target
+from CDS.routers.contexts import PatientViewHookInput
+from CDS.interop.msg.cds_hooks import PatientViewInputRequest, PatientViewResponse
+
+_bs = None
+
+
+def get_bs():
+    global _bs
+    if _bs is None:
+        _bs = Director.create_python_business_service('BS.PatientView')
+    return _bs
+
+
+class PatientView(BusinessService):
+    
+    process_target = target('Process') 
+
+    def on_process_input(self, message_input: PatientViewHookInput) -> PatientViewResponse:
+        msg = PatientViewInputRequest(input=message_input)
+        response: PatientViewResponse = self.send_request_sync(self.process_target, msg)
+        return response

@@ -15,4 +15,4 @@ iop --init
 
 iris session iris < "$APP_HOME/iris.script"
 
-iop -m "$APP_HOME/src/EAI/python/EAI/settings.py"
+iop -m "$APP_HOME/src/EAI/python/settings.py"

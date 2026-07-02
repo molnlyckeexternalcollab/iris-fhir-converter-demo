@@ -1,0 +1,186 @@
+info:
+  name: order-select hook
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{http_base_url}}/cds/cds-services/order-select"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "hookInstance": "a3b4c5d6-e7f8-11ea-bf16-460231621f93",
+        "fhirServer": "https://example.com/interconnect-instance-oauth/api/FHIR/R4",
+        "hook": "order-select",
+        "fhirAuthorization": {
+          "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ1cm46ZXBpYzpjZWMuY2RlIiwiY2xpZW50X2lkIjoiYWVhYzNkYTctNjQ4MS00NWFmLWFkNDEtNDJlNWU3MDExNDFkIiwiZXBpYy5lY2kiOiJ1cm46ZXBpYzpDdXJyZW50LURldmVsb3BtZW50LUVudmlyb25tZW50IiwiZXBpYy5tZXRhZGF0YSI6Ik4yTDdoSFE3clNxLXdQbkstcVMyZlBTSjY1Q1EzS1ZOVHhhTUlBZGRVTllwemQyOEE0Q2d4ZHA0SVg0NUI5YmE4TVVJdEl1NkEzYjBkYmU1c1ZlY093V1ZZN0tTd2VZb09KZDR5R2hmblcxdk9yOENoX195N2NrT1VtV005cnVhIiwiZXBpYy50b2tlbnR5cGUiOiJhY2Nlc3MiLCJleHAiOjE1OTQ4NjMzMzcsImlhdCI6MTU5NDg2MzAzNywiaXNzIjoidXJuOmVwaWM6Y2VjLmNkZSIsImp0aSI6ImU4MjFhMDA5LTgzNjAtNDRkYy1iZmMwLTEyZmU4ODA3MjQyYSIsIm5iZiI6MTU5NDg2MzAzNywic3ViIjoiZUJxZ0Foc2pVcHF3a3lJWm9LZU1jVUEzIn0.placeholder",
+          "token_type": "Bearer",
+          "expires_in": 300,
+          "scope": "MedicationRequest.Read (R4) MedicationRequest.Search (R4) Patient.Read (R4) Patient.Search (R4) ServiceRequest.Read (R4) ServiceRequest.Search (R4)",
+          "subject": "aeac3da7-6481-45af-ad41-42e5e701141d"
+        },
+        "context": {
+          "patientId": "eXoGxqgBaJuNkuahMYmiDhg3",
+          "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
+          "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+          "selections": [
+            "MedicationRequest/order-dressing-001"
+          ],
+          "draftOrders": {
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+              {
+                "resource": {
+                  "resourceType": "MedicationRequest",
+                  "id": "order-dressing-001",
+                  "status": "draft",
+                  "intent": "order",
+                  "category": [
+                    {
+                      "coding": [
+                        {
+                          "system": "http://terminology.hl7.org/CodeSystem/medicationrequest-category",
+                          "code": "inpatient",
+                          "display": "Inpatient"
+                        }
+                      ],
+                      "text": "Inpatient"
+                    }
+                  ],
+                  "priority": "routine",
+                  "medicationReference": {
+                    "reference": "Medication/med-ibuprofen-001",
+                    "display": "IBUPROFEN 200 MG PO TABS"
+                  },
+                  "subject": {
+                    "reference": "Patient/eXoGxqgBaJuNkuahMYmiDhg3",
+                    "display": "Patient, Test"
+                  },
+                  "encounter": {
+                    "reference": "Encounter/eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3"
+                  },
+                  "requester": {
+                    "reference": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
+                    "display": "Family Medicine Physician"
+                  },
+                  "dosageInstruction": [
+                    {
+                      "text": "200mg by mouth every 6 hours as needed for pain",
+                      "timing": {
+                        "repeat": {
+                          "frequency": 1,
+                          "period": 6,
+                          "periodUnit": "h"
+                        }
+                      },
+                      "asNeededBoolean": true,
+                      "doseAndRate": [
+                        {
+                          "doseQuantity": {
+                            "value": 200,
+                            "unit": "mg",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "mg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "resource": {
+                  "resourceType": "Medication",
+                  "id": "med-ibuprofen-001",
+                  "code": {
+                    "coding": [
+                      {
+                        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                        "code": "1049502",
+                        "display": "Ibuprofen 200 MG Oral Tablet"
+                      }
+                    ],
+                    "text": "Ibuprofen 200 MG Oral Tablet"
+                  },
+                  "form": {
+                    "coding": [
+                      {
+                        "system": "http://snomed.info/sct",
+                        "code": "385055001",
+                        "display": "Tablet"
+                      }
+                    ],
+                    "text": "Tablet"
+                  },
+                  "ingredient": [
+                    {
+                      "itemCodeableConcept": {
+                        "coding": [
+                          {
+                            "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                            "code": "5640",
+                            "display": "Ibuprofen"
+                          }
+                        ],
+                        "text": "Ibuprofen"
+                      },
+                      "strength": {
+                        "numerator": {
+                          "value": 200,
+                          "unit": "mg",
+                          "system": "http://unitsofmeasure.org",
+                          "code": "mg"
+                        },
+                        "denominator": {
+                          "value": 1,
+                          "unit": "tablet",
+                          "system": "http://unitsofmeasure.org",
+                          "code": "{tablet}"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "prefetch": {
+          "patient": {
+            "resourceType": "Patient",
+            "id": "eXoGxqgBaJuNkuahMYmiDhg3",
+            "name": [
+              {
+                "use": "official",
+                "family": "Physician",
+                "given": ["Family Medicine"]
+              }
+            ],
+            "gender": "male",
+            "birthDate": "1981-06-24"
+          }
+        },
+        "extension": {
+          "com.epic.cdshooks.request.bpa-trigger-action": "18",
+          "com.epic.cdshooks.request.cds-hooks-specification-version": "1.0",
+          "com.epic.cdshooks.request.fhir-version": "R4",
+          "com.epic.cdshooks.request.criteria-id": "2853",
+          "com.epic.cdshooks.request.epic-version": "9.4",
+          "com.epic.cdshooks.request.cds-hooks-implementation-version": "1.0",
+          "com.epic.cdshooks.request.cds-hooks-su-version": "0"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: Tests the order-select CDS hook. The selections array identifies which orders in draftOrders are newly selected (the trigger). draftOrders contains the full bundle of unsigned orders including previously selected ones. Expects a NotImplementedError response until BP.OrderSelect is implemented.

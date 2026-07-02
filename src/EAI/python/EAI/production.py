@@ -14,11 +14,12 @@ The production also includes a RandomRestOperation for testing external API inte
 import os
 
 from iop import Production
-from .bp import FhirConverterProcess
-from .bo import (
+from EAI.bp import FhirConverterProcess
+from EAI.bo import (
     FhirConverterOperation,
     FhirFileDropOperation,
     FhirHttpOperation,
+    HttpOperation
 )
 
 # Define the production topology using IoP 4.0 API
@@ -42,6 +43,8 @@ fhir_http_op = prod.operation(
 
 file_drop_op = prod.operation(FhirFileDropOperation)
 
+hapi_risk_operation = prod.operation('HapiRiskOperation', HttpOperation)
+
 # Define processes
 converter_proc = prod.process(FhirConverterProcess)
 
@@ -54,8 +57,8 @@ hl7_file_service = prod.service(
         'TargetConfigNames': converter_proc.name,
     },
     adapter_settings={
-        'FilePath': f"{os.environ.get('APP_HOME', '/irisdev/app')}/misc/data/input/",
-        'ArchivePath': f"{os.environ.get('APP_HOME', '/irisdev/app')}/misc/data/archive",
+        'FilePath': f"{os.environ['APP_HOME']}/misc/data/input/",
+        'ArchivePath': f"{os.environ['APP_HOME']}/misc/data/archive",
         'FileSpec': '*.hl7',
     },
 )
@@ -76,4 +79,5 @@ hl7_tcp_service = prod.service(
 prod.connect(converter_proc.converter_target, converter_op)
 prod.connect(converter_proc.file_target, file_drop_op)
 prod.connect(converter_proc.fhir_target, fhir_http_op)
+prod.connect(converter_proc.hapi_risk_target, hapi_risk_operation)
 

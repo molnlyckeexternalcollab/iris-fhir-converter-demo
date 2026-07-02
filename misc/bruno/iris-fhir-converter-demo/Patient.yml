@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{http_base_url}}/fhir/r4/Patient"
+  url: "{{http_base_url}}/proxy/fhir/Patient"
   headers:
     - name: Content-Type
       value: application/fhir+json

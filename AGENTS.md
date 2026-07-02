@@ -6,7 +6,7 @@ productions.
 
 ## Project Status
 
-✅ **Refactored to IoP 4.0.0 best practices** (see [REFACTORING.md](REFACTORING.md))
+✅ **Refactored to IoP 4.0 best practices** (see [REFACTORING.md](REFACTORING.md))
 
 Key improvements:
 - Python `Production` object in `src/EAI/python/EAI/production.py`
@@ -14,6 +14,44 @@ Key improvements:
 - Type annotations across all components
 - Enhanced error handling and logging
 - Proper package-qualified imports
+
+### IoP 4.0 Breaking Changes (vs 3.x)
+
+- **`grongier.pex` removed** — use `iop` package only. IRIS proxy classes are now `IOP.*`, not `Grongier.PEX.*`.
+- **Lifecycle hooks renamed to snake_case**: `on_init`, `on_tear_down`, `on_message`, `on_process_input`, `on_poll`. CamelCase versions no longer exist.
+- **Implementation modules moved**: private `iop._*` files are gone; use `iop.components`, `iop.messages`, `iop.migration`, `iop.production`, `iop.runtime`.
+- **`Director` and `Utils` facades deprecated** (still work, scheduled for removal in v5): prefer `iop.runtime.director` functions.
+- **`PollingBusinessService`** is now a first-class export from `iop`; use `on_poll()` instead of overriding `on_process_input()`.
+- **`@handler(MessageType)`** is the explicit dispatch decorator for operations and processes.
+- **`iop --migrate --dry-run`** / `--explain` now supported.
+
+## Dev Environment
+
+- The application runs inside a Docker container named `iris` (defined in `docker-compose.yml`).
+- The source tree on the host is bind-mounted into the container at `/irisdev/app/`.
+- The host path `/Users/8826/Developer/misc/iris-fhir-converter-demo/` maps to `/irisdev/app/` inside the container.
+- **`iop --migrate` requires the IRIS Embedded Python runtime and must NOT be run on the host Mac.** Always run it via `docker-compose exec iris`.
+
+### Workflow: after changing Python interop files (settings.py, bs/, bp/, bo/, msg/)
+
+1. **Clear pycache inside the container** — stale `.pyc` files cause workers to load old bytecode:
+   ```sh
+   docker-compose -f docker-compose.yml exec iris find /irisdev/app/src/CDS/python -type d -name __pycache__ -exec rm -rf {} +
+   ```
+
+2. **Run `iop --migrate` inside the container:**
+
+   For the CDS interop package (`src/CDS/python/CDS/interop`):
+   ```sh
+   docker-compose -f docker-compose.yml exec iris python3 -m iop --migrate /irisdev/app/src/CDS/python/CDS/interop/settings.py
+   ```
+
+   For the EAI interop package (`src/EAI/python/EAI/interop`):
+   ```sh
+   docker-compose -f docker-compose.yml exec iris python3 -m iop --migrate /irisdev/app/src/EAI/python/EAI/interop/settings.py
+   ```
+
+Run both steps together whenever `settings.py` or any interop package file changes.
 
 ## First Prompt Contract
 
@@ -48,13 +86,23 @@ If this project does not include local cookbooks, use the public IoP cookbooks:
 
 Update this list for the local project:
 
-- `src/EAI/python/EAI/settings.py`: Migration entrypoint with `PRODUCTIONS = [prod]`.
-- `src/EAI/python/EAI/production.py`: IoP 4.0 Python Production object with component topology.
-- `src/EAI/python/EAI/msg.py`: Message dataclasses for the pipeline.
-- `src/EAI/python/EAI/bp.py`: Business Processes (FhirConverterProcess, FhirMainProcess).
-- `src/EAI/python/EAI/bo.py`: Business Operations (FhirConverterOperation, FhirHttpOperation, RandomRestOperation).
-- `src/EAI/python/EAI/obj.py`: Data objects (PermissionObj).
-- `src/EAI/python/EAI/utils.py`: Utility functions for filtering.
+**EAI package** (`src/EAI/python/EAI/`):
+- `settings.py`: Migration entrypoint with `PRODUCTIONS = [prod]`.
+- `production.py`: IoP 4.0 Python Production object with component topology.
+- `msg.py`: Message dataclasses for the pipeline.
+- `bp.py`: Business Processes (FhirConverterProcess, FhirMainProcess).
+- `bo.py`: Business Operations (FhirConverterOperation, FhirHttpOperation, RandomRestOperation).
+- `obj.py`: Data objects (PermissionObj).
+- `utils.py`: Utility functions for filtering.
+
+**CDS package** (`src/CDS/python/CDS/`):
+- `app.py`: FastAPI entry point, loaded by IRIS WSGI.
+- `routers/contexts.py`: Hook context/input models shared between routers and interop.
+- `interop/settings.py`: `CLASSES` dict + `PRODUCTIONS` config for the CDS production.
+- `interop/bs/`: Business Services (one module per hook: `patient_view.py`, `order_select.py`, `order_sign.py`, plus `hapi.py`).
+- `interop/bp/`: Business Processes (one module per hook plus `hapi.py`).
+- `interop/bo/`: Business Operations (`hapi.py`, `fhir.py`).
+- `interop/msg/`: IOP PydanticMessage classes (`__init__.py` for HAPI, `cds_hooks.py` for CDS hooks).
 
 ## settings.py Import Rules
 
@@ -73,6 +121,8 @@ Update this list for the local project:
 
 ## IoP Rules
 
+- Import from `iop`, not from `grongier.pex` — that package is removed in 4.0.
+- IRIS proxy classes are `IOP.*`; do not reference `Grongier.PEX.*` in any ObjectScript or config.
 - Prefer a Python `Production` object exported through `PRODUCTIONS`.
 - Use `prod.service(...)`, `prod.process(...)`, `prod.operation(...)`, and
   `prod.connect(...)` to declare topology.
@@ -80,12 +130,18 @@ Update this list for the local project:
 - Do not put component startup logic in `__init__()`. Use `on_init()`.
 - Use `on_tear_down()` for cleanup when a component becomes inactive.
 - Use `@dataclass` on regular `Message` classes. Do not decorate
-  `PydanticMessage` classes with `@dataclass`.
+  `PydanticMessage` classes with `@dataclass` — IOP raises `SerializationError`
+  if combined.
 - Use `PersistentMessage` only when IRIS needs a native persistent message body.
 - Put new graph components in `PRODUCTIONS`; avoid raw `CLASSES` entries for
   components already declared in the production graph.
 - Keep executable sample code behind `if __name__ == "__main__":` when it lives
   in a migration file.
+- IOP message field naming convention: use `input` (not `request`) to match the
+  `RiskAssessmentInputRequest.input` pattern.
+- `Director.create_python_business_service(...)` must be called lazily (inside a
+  `get_bs()` function), never at module import time — the IRIS portal imports all
+  settings modules before any production starts.
 
 ## Dispatch Rules
 
@@ -94,6 +150,8 @@ Update this list for the local project:
   `submit_order(self, request: OrderRequest)`.
 - Use `@handler(MessageType)` when the handler should be explicit or the type
   annotation is not enough.
+- Duplicate `@handler` mappings for the same type emit a warning; the second
+  handler is discarded.
 - Avoid explicit `DISPATCH` entries in new code; treat them as legacy or
   advanced compatibility hooks.
 - Avoid duplicate handlers for the same message type unless the intended
@@ -130,9 +188,16 @@ A change is done when the fastest relevant checks pass and the expected
 production behavior is observable. Adapt this list to the local project:
 
 ```bash
+# Syntax check on the host
 python -m py_compile src/EAI/python/EAI/*.py
-iop --migrate src/EAI/python/EAI/settings.py --dry-run
-iop --migrate src/EAI/python/EAI/settings.py
+python -m py_compile src/CDS/python/CDS/**/*.py
+
+# Clear pycache and migrate inside the container (iop --migrate must NOT run on the host)
+docker-compose -f docker-compose.yml exec iris find /irisdev/app/src/CDS/python -type d -name __pycache__ -exec rm -rf {} +
+docker-compose -f docker-compose.yml exec iris python3 -m iop --migrate /irisdev/app/src/CDS/python/CDS/interop/settings.py
+docker-compose -f docker-compose.yml exec iris python3 -m iop --migrate /irisdev/app/src/EAI/python/EAI/interop/settings.py
+
+# Rebuild if Dockerfile or dependencies changed
 docker compose up --build
 ```
 

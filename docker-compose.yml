@@ -7,11 +7,11 @@ services:
     depends_on:
       - webgateway
     environment:
-      - ISC_CPF_MERGE_FILE=${APP_HOME:-/irisdev/app}/merge.cpf
-      - FHIR_SERVER_ENABLE=${FHIR_SERVER_ENABLE:-true}
-      - FHIR_SERVER_VERSION=${FHIR_SERVER_VERSION:-R4}
-      - FHIR_SERVER_PATH=${FHIR_SERVER_PATH:-/fhir/r4}
-      - FHIR_SERVER_STRATEGY=${FHIR_SERVER_STRATEGY:-FHIR.Python.InteractionsStrategy}
+      - ISC_CPF_MERGE_FILE=${APP_HOME}/merge.cpf
+      - FHIR_SERVER_ENABLE=${FHIR_SERVER_ENABLE}
+      - FHIR_SERVER_VERSION=${FHIR_SERVER_VERSION}
+      - FHIR_SERVER_PATH=${FHIR_SERVER_PATH}
+      - FHIR_SERVER_STRATEGY=${FHIR_SERVER_STRATEGY}
     hostname: iris
     networks:
       - iris-fhir-converter-demo
@@ -34,7 +34,7 @@ services:
         protocol: tcp
     restart: always
     volumes:
-      - .:${APP_HOME:-/irisdev/app}
+      - .:${APP_HOME}
 
   webgateway:
     container_name: webgateway
