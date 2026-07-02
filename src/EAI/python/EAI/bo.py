@@ -150,7 +150,7 @@ class HttpOperation(BusinessOperation):
 class FhirHttpOperation(BusinessOperation):
     """Posts FHIR resources to FHIR server via HTTP."""
 
-    url: str = 'https://localhost/fhir/r4'
+    url: str = 'http://localhost:52773/fhir/r4'
     credential: str = 'SuperUser'
 
     def on_init(self) -> None:

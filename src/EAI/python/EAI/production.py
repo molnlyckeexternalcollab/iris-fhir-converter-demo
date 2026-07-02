@@ -36,7 +36,7 @@ converter_op = prod.operation(FhirConverterOperation)
 fhir_http_op = prod.operation(
     FhirHttpOperation,
     settings={
-        'url': 'https://webgateway/fhir/r4',
+        'url': 'http://localhost:52773/fhir/r4',
         'credential': 'SuperUser',
     },
 )
