@@ -28,7 +28,7 @@ http:
           "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
           "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
           "selections": [
-            "MedicationRequest/order-mepilex-001"
+            "MedicationRequest/order-dressing-001"
           ],
           "draftOrders": {
             "resourceType": "Bundle",
@@ -37,7 +37,7 @@ http:
               {
                 "resource": {
                   "resourceType": "MedicationRequest",
-                  "id": "order-mepilex-001",
+                  "id": "order-dressing-001",
                   "status": "draft",
                   "intent": "order",
                   "category": [

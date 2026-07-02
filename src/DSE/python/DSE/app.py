@@ -3,10 +3,7 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-from CDS.routers.cds_services import router as cds_services_router
-from CDS.routers.patient_view import router as patient_view_router
-from CDS.routers.order_select import router as order_select_router
-from CDS.routers.order_sign import router as order_sign_router
+from DSE.routers.hapi import router as hapi_router
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -20,8 +17,8 @@ logging.basicConfig(
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 app = FastAPI(
-    title="CDS Service",
-    description="Mock EHR/integration APIs for EMIL POC",
+    title="DSE Service",
+    description="Decision Support Engine",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -36,11 +33,8 @@ async def debug_exception_handler(request: Request, exc: Exception):
     """
     return PlainTextResponse(traceback.format_exc(), status_code=500)
 
-app.include_router(cds_services_router)
-app.include_router(patient_view_router)
-app.include_router(order_select_router)
-app.include_router(order_sign_router)
+app.include_router(hapi_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8001)
+    uvicorn.run(app, host="localhost", port=8002)

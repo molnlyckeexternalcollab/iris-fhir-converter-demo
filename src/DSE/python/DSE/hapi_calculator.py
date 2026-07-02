@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 import numpy as np
 from scipy import stats
 
-from CDS.models import RiskAssessmentInput, RiskCalculationResult
+from DSE.models import RiskAssessmentInput, RiskCalculationResult
 
 
 @dataclass

@@ -15,8 +15,8 @@ from fhir.resources.codeableconcept import CodeableConcept
 from fhir.resources.coding import Coding
 from fhir.resources.reference import Reference
 from fhir.resources.riskassessment import RiskAssessment, RiskAssessmentPrediction
-from CDS.models import RiskAssessmentInput, RiskCalculationResult
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.models import RiskAssessmentInput, RiskCalculationResult
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 
 class FhirConverterProcess(BusinessProcess):
     """Routes HL7v2 messages through FHIR conversion and submission."""
@@ -24,7 +24,7 @@ class FhirConverterProcess(BusinessProcess):
     converter_target = target()
     file_target = target()
     fhir_target = target()
-    cds_hapi_risk_target = target()
+    hapi_risk_target = target()
 
     def on_enslib_message(self, request: 'iris.EnsLib.HL7.Message') -> None:
         """
@@ -43,16 +43,13 @@ class FhirConverterProcess(BusinessProcess):
             converted_rsp: FhirConverterResponse = self.submit_fhir_converter_message(fcm)
 
             # Enhance the converted FHIR bundle with a HAPI pressure injury RiskAssessment
-            try:
-                fhir_data = json.loads(converted_rsp.output_data)
-                hapi_input, patient_ref = self._extract_hapi_input(fhir_data)
-                risk_request = RiskAssessmentInputRequest(input=hapi_input)
-                risk_response: RiskAssessmentResultResponse = self.send_request_sync(self.cds_hapi_risk_target, risk_request)
-                risk_assessment = self._build_risk_assessment(risk_response.result, patient_ref)
-                fhir_data = self._add_to_bundle(fhir_data, risk_assessment)
-                converted_rsp.output_data = json.dumps(fhir_data)
-            except Exception as e:
-                self.log_warning(f"HAPI risk enhancement failed, sending original bundle: {e}")
+            fhir_data = json.loads(converted_rsp.output_data)
+            hapi_input, patient_ref = self._extract_hapi_input(fhir_data)
+            risk_request = RiskAssessmentInputRequest(input=hapi_input)
+            risk_response: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_risk_target, risk_request)
+            risk_assessment = self._build_risk_assessment(risk_response.result, patient_ref)
+            fhir_data = self._add_to_bundle(fhir_data, risk_assessment)
+            converted_rsp.output_data = json.dumps(fhir_data)
 
             # send this to the FHIR server
             fhir_request = FhirRequest(
@@ -66,7 +63,6 @@ class FhirConverterProcess(BusinessProcess):
             # Drop converted payload to misc/data/fhir via dedicated operation.
             self.send_request_sync(self.file_target, converted_rsp)
             self.send_request_sync(self.fhir_target, fhir_request)
-
 
         except Exception as e:
             self.log_error(f'Failed to process HL7 message: {str(e)}')

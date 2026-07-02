@@ -15,15 +15,25 @@ logger = logging.getLogger(__name__)
 # Shared constants
 # ---------------------------------------------------------------------------
 
-_MOLNLYCKE_ICON = (
-    "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmci"
-    "IHdpZHRoPSI5MiIgaGVpZ2h0PSI0NCIgZmlsbD0ibm9uZSIgY2xhc3M9ImxvZ28iPjwvc3ZnPg=="
+_COMPANY_ICON = (
+    "data:image/svg+xml;base64,"
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MTQg"
+    "OTE0IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PHBhdGggZmlsbD0iIzQ1OWEzMSIgZD0iTTM0"
+    "MC42MzcuMzg5aDIzMi4yNDFjMzUuNDk3IDAgNjQuNTE1IDI4Ljk5IDY0LjUxNSA2NC40MzdMMjc2"
+    "LjEyMiAyNzYuNzMyaDU3My4zOGMzNS40OCAwIDY0LjQ5OCAyOC45OSA2NC40OTggNjQuNDM3djIz"
+    "Mi4wMzVjMCAzNS40NDYtMjkuMDE4IDY0LjQ1My02NC40OTggNjQuNDUzSDYzNy4zOTNsLTM2MS4y"
+    "NzEgMjExLjg5YzAgMzUuNDQ3IDI5LjAzNSA2NC40NTMgNjQuNTE1IDY0LjQ1M2gyMzIuMjQxYzM1"
+    "LjQ5NyAwIDY0LjUxNS0yOS4wMDYgNjQuNTE1LTY0LjQ1M3YtMjExLjg5SDY0LjAzYy0zNS40ODEg"
+    "MC02NC41MTUtMjkuMDA3LTY0LjUxNS02NC40NTNWMzQxLjE2OWMwLTM1LjQ0NyAyOS4wMzQtNjQu"
+    "NDM3IDY0LjUxNS02NC40MzdoMjEyLjA5MlY2NC44MjZjMC0zNS40NDcgMjkuMDM1LTY0LjQzNyA2"
+    "NC41MTUtNjQuNDM3Ii8+PC9zdmc+Cg=="
 )
 
-_MOLNLYCKE_SOURCE = {
-    "label": "Mölnlycke Health Care",
-    "url": "https://www.molnlycke.com/en-us",
-    "icon": _MOLNLYCKE_ICON,
+
+_COMPANY_SOURCE = {
+    "label": "Company Health Care ®",
+    "url": "https://www.company.com/en-us",
+    "icon": _COMPANY_ICON,
 }
 
 # ---------------------------------------------------------------------------

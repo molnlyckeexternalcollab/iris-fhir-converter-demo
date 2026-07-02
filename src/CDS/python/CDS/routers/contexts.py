@@ -60,7 +60,7 @@ class OrderSelectHookInput(CdsHookRequest):
                     "userId": "PractitionerRole/e-QokEGUJIzyynNdkCFrs9w3",
                     "patientId": "eXoGxqgBaJuNkuahMYmiDhg3",
                     "encounterId": "eFyoeOuWgXtlQmOQzPdkQWwy3s8a49yrUc-LtjwhWT6g3",
-                    "selections": ["MedicationRequest/order-mepilex-001"],
+                    "selections": ["MedicationRequest/order-dressing-001"],
                     "draftOrders": {
                         "resourceType": "Bundle",
                         "type": "collection",
@@ -68,7 +68,7 @@ class OrderSelectHookInput(CdsHookRequest):
                             {
                                 "resource": {
                                     "resourceType": "MedicationRequest",
-                                    "id": "order-mepilex-001",
+                                    "id": "order-dressing-001",
                                     "status": "draft",
                                     "intent": "order",
                                     "priority": "routine",

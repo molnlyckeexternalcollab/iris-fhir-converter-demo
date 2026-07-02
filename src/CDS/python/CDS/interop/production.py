@@ -1,32 +1,33 @@
 """
-FHIR HL7v2 Converter Production.
+HL7 CDS Hooks server production.
 
-Orchestrates HL7v2 → FHIR conversion with the following flow:
-  1. HL7v2 messages → FhirConverterProcess
-  2. FhirConverterProcess → FhirConverterOperation (conversion)
-  3. Converted FHIR → FhirHttpOperation (POST to FHIR server)
-  4. FHIR requests → FhirMainProcess (with token validation & filtering)
-  5. FhirMainProcess → FhirHttpOperation (forward to FHIR server)
+Implements the HL7 CDS Hooks specification with Epic-specific nuances.
+Receives hook requests and routes them through the IRIS production:
 
-The production also includes a RandomRestOperation for testing external API integration.
+  BS.PatientView  → BP.PatientView  → BO.Fhir
+  BS.OrderSelect  → BP.OrderSelect
+  BS.OrderSign    → BP.OrderSign
+
+Each Business Service is a thin bridge between the FastAPI WSGI layer and the
+production message graph. Business Processes implement hook-specific logic
+(prefetch resolution, card building). BO.Fhir handles outbound FHIR reads.
+
+Decision support computation (risk scoring, DMN rules) can live in another namespace (e.g., DSE)
+and be called over HTTP from the relevant Business Process.
 """
-
-import os
 
 from iop import Production
 
-from bs.hapi import Hapi as BSHapi
 from bs.patient_view import PatientView as BSPatientView
 from bs.order_select import OrderSelect as BSOrderSelect
 from bs.order_sign import OrderSign as BSOrderSign
 
-from bp.hapi import Hapi as BPHapi
 from bp.patient_view import PatientView as BPPatientView
 from bp.order_select import OrderSelect as BPOrderSelect
 from bp.order_sign import OrderSign as BPOrderSign
 
-from bo.hapi import Hapi as BOHapi
 from bo.fhir import Fhir as BOFhir
+from bo.hapi import HttpOperation as BOHapiRisk
 
 # Define the production topology using IoP 4.0+ API
 prod = Production(
@@ -37,28 +38,23 @@ prod = Production(
 )
 
 # Define services
-hapi_service = prod.service('BS.Hapi', BSHapi)
 patient_view_service = prod.service('BS.PatientView', BSPatientView)
 order_select_service = prod.service('BS.OrderSelect', BSOrderSelect)
 order_sign_service = prod.service('BS.OrderSign', BSOrderSign)
 
 # Define processes
-hapi_process = prod.process('BP.Hapi', BPHapi)
 patient_view_process = prod.process('BP.PatientView', BPPatientView)
 order_select_process = prod.process('BP.OrderSelect', BPOrderSelect)
 order_sign_process = prod.process('BP.OrderSign', BPOrderSign)
 
 # Define operations
-hapi_operation = prod.operation('BO.Hapi', BOHapi)
+hapi_risk_operation = prod.operation('HapiRiskOperation', BOHapiRisk)
 fhir_operation = prod.operation('BO.Fhir', BOFhir)
 
-
 # Connect the conversion pipeline
-prod.connect(hapi_service.process_target, hapi_process)
-
 prod.connect(patient_view_service.process_target, patient_view_process)
 prod.connect(order_select_service.process_target, order_select_process)
 prod.connect(order_sign_service.process_target, order_sign_process)
 
-prod.connect(patient_view_process.hapi_target, hapi_process)
+prod.connect(patient_view_process.hapi_risk_target, hapi_risk_operation)
 prod.connect(patient_view_process.fhir_target, fhir_operation)

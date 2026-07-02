@@ -5,7 +5,7 @@ Phase 1 (sequential, PoolSize=1):
      context.draftOrders (per CDS Hooks spec, decision support should focus
      on newly selected orders only, not the entire draft set).
   2. Build CDS cards:
-     - Always: informational card listing relevant Mölnlycke wound care products.
+     - Always: informational card listing relevant Company® care products.
      - When any newly selected order is a ServiceRequest or ProcedureRequest:
        also suggest a wound dressing change protocol (ServiceRequest).
 """
@@ -23,7 +23,7 @@ from CDS.routers.cds_hooks_models import (
     CdsLink,
     CdsSource,
     CdsSuggestion,
-    _MOLNLYCKE_SOURCE,
+    _COMPANY_SOURCE,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,24 +82,24 @@ def _build_cards(
         # Card 1 — always shown: product awareness
         CdsCard(
             uuid="wound-care-order-select-info-001",
-            summary="Mölnlycke wound care products available for this patient",
+            summary="Company® care products available for this patient",
             detail=(
                 "When managing patients with wounds or at risk of pressure injury, "
-                "consider Mölnlycke evidence-based dressings:\n\n"
-                "- **Mepilex Border** — self-adherent soft silicone foam for pressure injuries "
+                "consider Company® evidence-based dressings:\n\n"
+                "- **Dressing B** — self-adherent soft silicone foam for pressure injuries "
                 "(stages 2–3, heel/sacrum)\n"
-                "- **Mepitel One** — single-layer wound contact layer for superficial or "
+                "- **Dressing C** — single-layer wound contact layer for superficial or "
                 "partial-thickness wounds\n"
-                "- **Mepilex Transfer** — thin absorbent dressing for wounds with moderate exudate\n\n"
+                "- **Dressing T** — thin absorbent dressing for wounds with moderate exudate\n\n"
                 "Use alongside a structured prevention protocol: repositioning schedule, "
                 "nutritional support, and regular skin assessment."
             ),
             indicator="info",
-            source=CdsSource(**_MOLNLYCKE_SOURCE),
+            source=CdsSource(**_COMPANY_SOURCE),
             links=[
                 CdsLink(
-                    label="Mölnlycke Wound Care Product Selector",
-                    url="https://www.molnlycke.com/en-us/products/wound-care/",
+                    label="Company® Care Product Selector",
+                    url="https://www.company.com/en-us/products/wound-care/",
                     type="absolute",
                 )
             ],
@@ -117,22 +117,22 @@ def _build_cards(
         cards.append(
             CdsCard(
                 uuid="wound-care-order-select-protocol-001",
-                summary="Add Mepilex Border dressing change protocol",
+                summary="Add Dressing B dressing change protocol",
                 detail=(
                     "A structured dressing change protocol improves wound healing outcomes "
                     "and reduces the risk of infection.\n\n"
-                    "**Suggested Mepilex Border protocol:**\n"
+                    "**Suggested Dressing B protocol:**\n"
                     "- Change dressing every **3 days**, or sooner if saturated or dislodged\n"
                     "- Cleanse wound bed with **saline** before each change\n"
                     "- Document wound dimensions, exudate level, and periwound skin at each change\n"
-                    "- Apply gentle pressure around edges after placement to activate Safetac® adhesion\n\n"
+                    "- Apply gentle pressure around edges after placement to activate the silicon foam adhesion\n\n"
                     "Accepting this suggestion will add a wound dressing ServiceRequest to the order set."
                 ),
                 indicator="warning",
-                source=CdsSource(**_MOLNLYCKE_SOURCE),
+                source=CdsSource(**_COMPANY_SOURCE),
                 suggestions=[
                     CdsSuggestion(
-                        label="Add wound dressing change protocol — Mepilex Border every 3 days",
+                        label="Add wound dressing change protocol — Dressing B every 3 days",
                         uuid="suggestion-wound-care-protocol-001",
                         isRecommended=True,
                         actions=[
@@ -152,7 +152,7 @@ def _build_cards(
                                                 "display": "Dressing of wound",
                                             }
                                         ],
-                                        "text": "Wound dressing change — Mepilex Border, every 3 days",
+                                        "text": "Wound dressing change — Dressing B, every 3 days",
                                     },
                                     "subject": {"reference": f"Patient/{patient_id}"},
                                     "occurrenceTiming": {
@@ -163,7 +163,7 @@ def _build_cards(
                                         }
                                     },
                                     "patientInstruction": (
-                                        "Apply Mepilex Border dressing to the wound. "
+                                        "Apply Dressing B dressing to the wound. "
                                         "Cleanse with saline before each change. "
                                         "Replace every 3 days or sooner if saturated."
                                     ),

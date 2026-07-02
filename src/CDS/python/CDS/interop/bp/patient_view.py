@@ -17,8 +17,8 @@ from typing import Any, Optional
 
 from iop import BusinessProcess, target
 
-from CDS.models import RiskAssessmentInput
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.models import RiskAssessmentInput
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 from CDS.interop.msg.cds_hooks import (
     FhirReadRequest,
     PatientViewInputRequest,
@@ -31,7 +31,7 @@ from CDS.routers.cds_hooks_models import (
     CdsLink,
     CdsSource,
     CdsSuggestion,
-    _MOLNLYCKE_SOURCE,
+    _COMPANY_SOURCE,
     build_smart_launch_url,
 )
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class PatientView(BusinessProcess):
 
-    hapi_target = target()
+    hapi_risk_target = target()
     fhir_target = target()
 
     def on_patient_view_request_message(
@@ -60,9 +60,9 @@ class PatientView(BusinessProcess):
         hapi_input = self._build_hapi_input(patient)
 
         # --- Step 3: calculate risk via BP.Hapi ---
-        hapi_msg = RiskAssessmentInputRequest(input=hapi_input)
-        result_msg: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_target, hapi_msg)
-        risk = result_msg.result
+        risk_request = RiskAssessmentInputRequest(input=hapi_input)
+        risk_response: RiskAssessmentResultResponse = self.send_request_sync(self.hapi_risk_target, risk_request)
+        risk = risk_response.result
 
         logger.info(
             "HAC PI risk for patient %s: %.1f%% (CI %.1f%%–%.1f%%, category=%s)",
@@ -81,20 +81,20 @@ class PatientView(BusinessProcess):
             # Card 1: information card (static, always "info")
             CdsCard(
                 uuid="wound-care-info-001",
-                summary="Pressure injury detected — Consider Mepilex Border",
+                summary="Pressure injury detected — Consider Dressing B",
                 detail=(
                     "**Patient has a Stage 2-3 pressure injury documented on heel/sacrum.**\n\n"
-                    "**Recommended product:** Mepilex Border — self-adherent soft silicone "
-                    "multi-layer foam dressing with Safetac® technology.\n\n"
+                    "**Recommended product:** Dressing B — self-adherent soft silicone "
+                    "multi-layer foam dressing with silicon technology.\n\n"
                     "Use as part of a comprehensive prevention protocol including support "
                     "surfaces, positioning, nutrition, and skin care."
                 ),
                 indicator="info",
-                source=CdsSource(**_MOLNLYCKE_SOURCE),
+                source=CdsSource(**_COMPANY_SOURCE),
                 links=[
                     CdsLink(
-                        label="Mepilex Border Product Family",
-                        url="https://www.molnlycke.com/en-us/products/wound-care/bordered-foam-dressings/",
+                        label="Dressing B Product Family",
+                        url="https://www.company.com/en-us/products/wound-care/dressing-b/",
                         type="absolute",
                     )
                 ],
@@ -102,23 +102,23 @@ class PatientView(BusinessProcess):
             # Card 2: suggestion card — risk-adjusted indicator
             CdsCard(
                 uuid="wound-care-suggestion-001",
-                summary=f"HAC PI risk {risk.risk_percentage:.1f}% — Order Mepilex Border Heel",
+                summary=f"HAC PI risk {risk.risk_percentage:.1f}% — Order Dressing BH",
                 detail=(
                     f"**HAC PI Risk Score: {risk.risk_percentage:.1f}% "
                     f"(CI: {risk.ci_lower:.1f}%–{risk.ci_upper:.1f}%)**\n\n"
                     "Accepting this suggestion will create a SupplyRequest for "
-                    "Mepilex Border Heel 22×23cm."
+                    "Dressing BH 11x12cm."
                 ),
                 indicator=indicator,
-                source=CdsSource(**_MOLNLYCKE_SOURCE),
+                source=CdsSource(**_COMPANY_SOURCE),
                 suggestions=[
                     CdsSuggestion(
-                        label="Order Mepilex Border Heel Dressing",
-                        uuid="suggestion-mepilex-heel-001",
+                        label="Order Dressing BH Dressing",
+                        uuid="suggestion-dressing-bh-001",
                         actions=[
                             CdsAction(
                                 type="create",
-                                description="Create supply request for Mepilex Border Heel 22x23cm",
+                                description="Create supply request for Dressing BH 11x12cm",
                                 resource={
                                     "resourceType": "SupplyRequest",
                                     "status": "active",
@@ -126,12 +126,12 @@ class PatientView(BusinessProcess):
                                     "itemCodeableConcept": {
                                         "coding": [
                                             {
-                                                "system": "http://www.molnlycke.com/products",
+                                                "system": "http://www.company.com/products",
                                                 "code": "282790",
-                                                "display": "Mepilex Border Heel 22x23cm",
+                                                "display": "Dressing BH 11x12cm",
                                             }
                                         ],
-                                        "text": "Mepilex Border Heel — foam dressing with Safetac",
+                                        "text": "Dressing BH — foam dressing with silicon",
                                     },
                                     "quantity": {"value": 5, "unit": "dressing"},
                                     "reasonReference": [
@@ -150,7 +150,7 @@ class PatientView(BusinessProcess):
             # Card 3: SMART app link — risk-adjusted indicator
             CdsCard(
                 uuid="wound-care-smart-app-001",
-                summary="Launch Mölnlycke Wound Care Decision Support App",
+                summary="Launch Company® Wound Care Decision Support App",
                 detail=(
                     f"**HAC PI Risk Score: {risk.risk_percentage:.1f}% "
                     f"(CI: {risk.ci_lower:.1f}%–{risk.ci_upper:.1f}%)**\n\n"
@@ -158,7 +158,7 @@ class PatientView(BusinessProcess):
                     "wizard, and evidence-based prevention protocols."
                 ),
                 indicator=indicator,
-                source=CdsSource(**_MOLNLYCKE_SOURCE),
+                source=CdsSource(**_COMPANY_SOURCE),
                 links=[
                     CdsLink(
                         label="Launch Wound Care Decision Support",
@@ -173,8 +173,8 @@ class PatientView(BusinessProcess):
                         ),
                     ),
                     CdsLink(
-                        label="Mepilex Border Product Family",
-                        url="https://www.molnlycke.com/en-us/products/wound-care/bordered-foam-dressings/",
+                        label="Dressing B Product Family",
+                        url="https://www.company.com/en-us/products/wound-care/dressing-b/",
                         type="absolute",
                     ),
                 ],

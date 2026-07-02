@@ -18,8 +18,8 @@ from EAI.msg import (
     FhirResponse
 )
 
-from CDS.models import RiskCalculationResult
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.models import RiskCalculationResult
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 
 class FhirConverterOperation(BusinessOperation):
     """Converts HL7v2 messages to FHIR using Liquid templates."""
@@ -134,7 +134,7 @@ class FhirFileDropOperation(BusinessOperation):
 
 class HttpOperation(BusinessOperation):
     # Direct IRIS port — bypasses webgateway, no TLS for internal calls
-    url = 'http://localhost:52773/cds/hapi'
+    url = 'http://localhost:52773/dse/hapi'
 
     def on_risk_assessment_input_request(self, request: RiskAssessmentInputRequest) -> RiskAssessmentResultResponse:
         response = requests.post(

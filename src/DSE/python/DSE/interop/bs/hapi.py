@@ -1,8 +1,8 @@
 """Business Service — HAPI risk calculator endpoint."""
 
 from iop import BusinessService, Director, target
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
-from CDS.models import RiskAssessmentInput, RiskCalculationResult
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.models import RiskAssessmentInput, RiskCalculationResult
 
 # Lazy: do NOT call Director at module level — the portal imports this file
 # for validation before any production is started, which could cause an error.

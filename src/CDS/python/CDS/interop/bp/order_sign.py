@@ -27,7 +27,7 @@ from CDS.routers.cds_hooks_models import (
     CdsLink,
     CdsSource,
     CdsSuggestion,
-    _MOLNLYCKE_SOURCE,
+    _COMPANY_SOURCE,
 )
 
 logger = logging.getLogger(__name__)
@@ -138,17 +138,17 @@ def _nsaid_warning_card(patient_id: str, nsaid_orders: list[dict[str, Any]]) -> 
             "Prolonged NSAID use may slow healing in patients with active wounds "
             "or at elevated risk of skin breakdown.\n\n"
             "**Suggested action:** if this patient has or is at risk of pressure injury, "
-            "consider adding a Mölnlycke prophylactic dressing (e.g. Mepilex Border) "
+            "consider adding a Company® prophylactic dressing (e.g. Dressing B) "
             "at bony prominences to reduce friction and shear while healing may be impaired.\n\n"
             "This card is informational — no action is required if wound risk has already "
             "been assessed."
         ),
         indicator="warning",
-        source=CdsSource(**_MOLNLYCKE_SOURCE),
+        source=CdsSource(**_COMPANY_SOURCE),
         suggestions=[
             CdsSuggestion(
-                label="Add prophylactic Mepilex Border dressing order",
-                uuid="suggestion-nsaid-mepilex-001",
+                label="Add prophylactic Dressing B dressing order",
+                uuid="suggestion-nsaid-dressing-001",
                 isRecommended=False,
                 actions=[
                     CdsAction(
@@ -167,11 +167,11 @@ def _nsaid_warning_card(patient_id: str, nsaid_orders: list[dict[str, Any]]) -> 
                                         "display": "Application of dressing to wound",
                                     }
                                 ],
-                                "text": "Prophylactic Mepilex Border dressing — bony prominences",
+                                "text": "Prophylactic Dressing B dressing — bony prominences",
                             },
                             "subject": {"reference": f"Patient/{patient_id}"},
                             "patientInstruction": (
-                                "Apply Mepilex Border self-adherent foam dressing over "
+                                "Apply Dressing B self-adherent foam dressing over "
                                 "sacrum and/or heels. Inspect daily. Replace every 3–5 days "
                                 "or sooner if integrity is compromised."
                             ),
@@ -184,7 +184,7 @@ def _nsaid_warning_card(patient_id: str, nsaid_orders: list[dict[str, Any]]) -> 
         links=[
             CdsLink(
                 label="NSAIDs and wound healing — clinical reference",
-                url="https://www.molnlycke.com/en-us/wound-care-academy/",
+                url="https://www.company.com/en-us/wound-care-academy/",
                 type="absolute",
             )
         ],
@@ -198,19 +198,19 @@ def _wound_care_confirmation_card(patient_id: str) -> CdsCard:
         detail=(
             "A wound care order is about to be committed. Before signing, confirm:\n\n"
             "- **Dressing type** matches wound depth and exudate level:\n"
-            "  - Superficial / low exudate → **Mepitel One** (wound contact layer)\n"
-            "  - Moderate exudate → **Mepilex Transfer** (thin absorbent)\n"
-            "  - Pressure injury stage 2–3, heel/sacrum → **Mepilex Border** (bordered foam)\n"
+            "  - Superficial / low exudate → **Dressing C** (wound contact layer)\n"
+            "  - Moderate exudate → **Dressing T** (thin absorbent)\n"
+            "  - Pressure injury stage 2–3, heel/sacrum → **Dressing B** (bordered foam)\n"
             "- **Change frequency** is documented (typically every 3 days for foam dressings)\n"
             "- **Wound assessment** at each change is included in the care plan\n\n"
             "No action required if the protocol is already complete."
         ),
         indicator="info",
-        source=CdsSource(**_MOLNLYCKE_SOURCE),
+        source=CdsSource(**_COMPANY_SOURCE),
         links=[
             CdsLink(
-                label="Mölnlycke Dressing Selection Guide",
-                url="https://www.molnlycke.com/en-us/products/wound-care/",
+                label="Company® Dressing Selection Guide",
+                url="https://www.company.com/en-us/products/wound-care/",
                 type="absolute",
             )
         ],

@@ -224,7 +224,7 @@ docs: >
   Tests the order-sign CDS hook. Unlike order-select there is no 'selections' array —
   all draftOrders are being signed. This payload includes two orders:
   1. A MedicationRequest for ibuprofen (RxNorm 5640 — an NSAID) → triggers the NSAID
-     wound healing warning card with a suggestion to add a prophylactic Mepilex Border dressing.
+     wound healing warning card with a suggestion to add a prophylactic Dressing B dressing.
   2. A ServiceRequest for wound dressing change → triggers the dressing selection
      confirmation card.
   Epic bpa-trigger-action 23 = Sign orders.

@@ -1,9 +1,9 @@
 import traceback
-from CDS.interop.bs.hapi import get_bs
+from DSE.interop.bs.hapi import get_bs
 from fastapi import APIRouter, HTTPException
-from CDS.models import RiskAssessmentInput, RiskCalculationResult
+from DSE.models import RiskAssessmentInput, RiskCalculationResult
 
-router = APIRouter(tags=["HAC PI Risk Calculator"])
+router = APIRouter(tags=["DSE"])
 
 @router.post("/hapi", response_model=RiskCalculationResult)
 async def calculate_hapi_risk(body: RiskAssessmentInput):

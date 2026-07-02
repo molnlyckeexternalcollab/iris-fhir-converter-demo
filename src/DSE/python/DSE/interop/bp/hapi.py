@@ -4,9 +4,9 @@ from fastapi import HTTPException
 from iop import BusinessProcess
 from pydantic import ValidationError
 
-from CDS.hapi_calculator import calculate_risk
-from CDS.models import RiskAssessmentInput, RiskCalculationResult
-from CDS.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
+from DSE.hapi_calculator import calculate_risk
+from DSE.models import RiskAssessmentInput, RiskCalculationResult
+from DSE.interop.msg import RiskAssessmentInputRequest, RiskAssessmentResultResponse
 
 
 class Hapi(BusinessProcess):
