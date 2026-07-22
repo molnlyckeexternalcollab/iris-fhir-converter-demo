@@ -1,13 +1,11 @@
 ---
 name: synthea-module-author
-description: Create valid Synthea modules — disease modules, contextual augmentation modules, or lab panel modules — with grounded medical codes. Every code is validated against a real terminology server — never hallucinated from training data. Use this skill whenever the user asks to create or extend any Synthea module, generate synthetic patient lab data, add observations to Synthea patients based on conditions, or model clinical scenarios for test data generation.
+description: Create valid Synthea disease modules with grounded medical codes. Every code is validated against a real terminology server — never hallucinated from training data.
 ---
 
 # Synthea Module Author
 
 A skill for creating new Synthea modules or extending existing ones. It generates valid JSON for Synthea's module engine, with grounded medical codes from SNOMED, LOINC, and RxNorm.
-
-This covers two distinct module archetypes — read the **Module Archetypes** section before writing any JSON.
 
 ## When to use this skill
 
@@ -15,9 +13,6 @@ This covers two distinct module archetypes — read the **Module Archetypes** se
 - "Add a rare condition to Synthea"
 - "Write a module for [condition] with labs, meds, and encounters"
 - "Extend the diabetes module to include CKD progression"
-- "Add albumin/BUN/chloride labs to frail elderly inpatients"
-- "Create a module that emits lab observations for patients with heart failure"
-- "Generate test patients with realistic lab panels for [clinical context]"
 
 ## Before you start
 
@@ -28,37 +23,6 @@ git clone https://github.com/synthetichealth/synthea.git
 cd synthea
 ./gradlew build -x test   # Java 11+ required, ~45 seconds
 ```
-
-## Module Archetypes
-
-Choose the right archetype before writing any JSON. The two patterns are structurally different.
-
-### Disease module
-
-Models condition onset, progression, treatment, and resolution. Population-level prevalence is controlled by `distributed_transition` probabilities from `Initial`.
-
-```
-Initial → distributed (1% onset / 99% skip) → ConditionOnset → Encounter → Labs/Meds → EncounterEnd → Delay (monitoring loop) → Terminal
-```
-
-Use when: modeling a disease from scratch, adding a new condition pathway, or extending an existing condition module.
-
-### Contextual augmentation module
-
-Does NOT model a disease. Runs against every patient, but uses `Guard` states to restrict actions to patients who already have relevant conditions or demographics. Emits observations or procedures into the patient record without altering disease prevalence.
-
-```
-Initial → Guard (age ≥ 55) → Guard (Active Condition: frailty/sepsis/heart failure) → Encounter (inpatient) → Observations → EncounterEnd → Terminal
-```
-
-Use when: adding lab panels to patients with pre-existing conditions, generating contextual observations for test data pipelines, or augmenting FHIR output without modeling new disease prevalence.
-
-**Key differences from disease modules:**
-- No `distributed_transition` for onset — every patient who passes the Guard gets the observations
-- The encounter is created specifically for this module's purpose (the module owns it)
-- Multiple `Guard` states can be chained with `conditional_transition` to branch into risk archetypes (low/moderate/high)
-
----
 
 ## Module JSON Schema
 
@@ -96,76 +60,6 @@ Example of top-level structure:
     "Terminal": { "type": "Terminal" }
   },
   "gmf_version": 2
-}
-```
-
-### Observation value specification
-
-`Observation` states require a value alongside the LOINC code. Use `exact` for a fixed value or `range` for a uniformly distributed random value. Always include `unit` and `category`.
-
-```json
-{
-  "type": "Observation",
-  "category": "laboratory",
-  "unit": "g/dL",
-  "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Albumin [Mass/volume] in Serum or Plasma" }],
-  "range": { "low": 2.0, "high": 2.5 },
-  "target_encounter": "Inpatient_Encounter",
-  "direct_transition": "Next_Observation"
-}
-```
-
-For an exact value: replace `"range": { ... }` with `"exact": { "quantity": 3.5 }`.
-
-Valid `category` values: `"laboratory"`, `"vital-signs"`, `"imaging"`, `"social-history"`, `"survey"`.
-
-### DiagnosticReport grouping
-
-Use `DiagnosticReport` to group related observations into a single FHIR `DiagnosticReport` resource (e.g., a metabolic panel). The observations are declared inline and do not need separate `Observation` states.
-
-```json
-{
-  "type": "DiagnosticReport",
-  "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Basic metabolic panel" }],
-  "observations": [
-    {
-      "category": "laboratory",
-      "unit": "g/dL",
-      "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Albumin [Mass/volume] in Serum or Plasma" }],
-      "range": { "low": 2.0, "high": 2.5 }
-    },
-    {
-      "category": "laboratory",
-      "unit": "mg/dL",
-      "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Urea nitrogen [Mass/volume] in Serum or Plasma" }],
-      "range": { "low": 20, "high": 45 }
-    }
-  ],
-  "target_encounter": "Inpatient_Encounter",
-  "direct_transition": "Encounter_End"
-}
-```
-
-Note: when using `DiagnosticReport`, the inline observations are still individually exported as FHIR `Observation` resources and also grouped under the `DiagnosticReport`. You do not need separate `Observation` states for the same labs.
-
-### Encounter class and inpatient codes
-
-For a general inpatient admission, the `Encounter` state needs a SNOMED class code. Always validate before use (see Code Grounding Rules below). Common candidates:
-
-| Encounter type       | Candidate SNOMED | Note                          |
-|----------------------|------------------|-------------------------------|
-| Inpatient admission  | validate via tx  | Search: "hospital admission"  |
-| Emergency encounter  | validate via tx  | Search: "emergency encounter" |
-| Ambulatory encounter | validate via tx  | Search: "outpatient encounter"|
-
-For `Encounter` states, also set `"encounter_class": "inpatient"` to ensure the exported FHIR resource has the correct class:
-
-```json
-{
-  "type": "Encounter",
-  "encounter_class": "inpatient",
-  "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Hospital admission" }],
-  "direct_transition": "Lab_Panel"
 }
 ```
 
@@ -361,21 +255,14 @@ grep -rl "<condition>" synthea/src/main/resources/modules/ 2>/dev/null
 
 If a module already exists, read it and tell the user what's there. Ask whether they want to extend it or create a new one.
 
-### Step 2: Determine archetype and research
+### Step 2: Research the condition
 
-First, decide which archetype applies (disease module vs contextual augmentation — see **Module Archetypes** above).
+Before writing any JSON, understand:
 
-**For disease modules**, understand:
 - Prevalence by age and sex (for transition probabilities)
 - Diagnostic criteria (what labs, imaging, or procedures confirm the diagnosis)
 - Standard treatment pathway (first-line meds, escalation, monitoring)
 - Condition progression (does it resolve? is it lifelong? what complications?)
-
-**For contextual augmentation modules**, understand:
-- What patient population should receive observations (age, conditions, encounter type)
-- What risk archetypes exist (e.g., low/moderate/high) and how to detect them from existing conditions
-- What observation values are clinically appropriate per archetype (get value ranges from clinical sources)
-- Whether any project-specific reference file exists — check `references/` in the skill directory
 
 Use WebSearch if available. If not, state what you know and flag uncertainty.
 
@@ -398,20 +285,12 @@ Write the module following the schema above. Place it in `synthea/src/main/resou
 
 Key patterns:
 
-**Disease modules:**
-- Start with an `Initial` state and an age/prevalence gate using `distributed_transition`
-- Calibrate probabilities against CDC/CMS prevalence data
+- Start with an `Initial` state and an age/prevalence gate
+- Use `distributed_transition` for prevalence-based onset (calibrate against CDC/CMS data)
+- Wrap clinical actions (labs, meds, procedures) inside `Encounter`/`EncounterEnd` pairs
+- Use `SetAttribute` to track patient state across module cycles
 - End chronic conditions with a monitoring loop (`Delay` → `Encounter` → `Delay`)
-
-**Contextual augmentation modules:**
-- Start with `Initial` → `Guard` (age) → `Guard` or `conditional_transition` (active conditions) → `Encounter` → observations → `EncounterEnd` → `Terminal`
-- Do NOT use `distributed_transition` for onset — every patient meeting the Guard criteria gets the observations
-- Branch into risk archetypes using `conditional_transition` checking `Active Condition` codes
-- Use `SetAttribute` to label the risk tier (e.g., `"hapi_risk_tier": "high"`) if downstream extraction needs it
-
-**Both archetypes:**
-- Wrap clinical actions inside `Encounter`/`EncounterEnd` pairs
-- Use `target_encounter` on `ConditionOnset`, `Observation`, `DiagnosticReport`, `Procedure`, `MedicationOrder` to link them to the active encounter
+- Use `target_encounter` on `ConditionOnset`, `Observation`, `Procedure`, `MedicationOrder` to link them to the encounter
 
 ### Step 5: Validate the module
 
@@ -446,98 +325,7 @@ jq -r '.entry[].resource | select(.resourceType=="MedicationRequest") | .medicat
 jq -r '.entry[].resource | select(.resourceType=="Procedure") | .code.coding[0].display' output/fhir/*.json
 ```
 
-### Step 4b: Augmentation module skeleton
-
-For reference, here is the skeleton of a contextual augmentation module with two risk branches:
-
-```json
-{
-  "name": "HAPI Lab Observations",
-  "remarks": [
-    "Contextual augmentation module — not a disease module.",
-    "Emits lab observations for patients age ≥ 55 who have a relevant inpatient condition.",
-    "Branches into high-risk (sepsis/ICU) and moderate-risk (heart failure/frailty) archetypes.",
-    "Patients who pass the age guard but have no matching condition go to Terminal."
-  ],
-  "states": {
-    "Initial": {
-      "type": "Initial",
-      "conditional_transition": [
-        {
-          "condition": { "condition_type": "Age", "operator": ">=", "quantity": 55, "unit": "years" },
-          "transition": "Risk_Branch"
-        },
-        { "transition": "Terminal" }
-      ]
-    },
-    "Risk_Branch": {
-      "type": "Simple",
-      "conditional_transition": [
-        {
-          "condition": {
-            "condition_type": "Active Condition",
-            "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Sepsis" }]
-          },
-          "transition": "High_Risk_Encounter"
-        },
-        {
-          "condition": {
-            "condition_type": "Or",
-            "conditions": [
-              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Heart failure" }] },
-              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Frailty" }] }
-            ]
-          },
-          "transition": "Moderate_Risk_Encounter"
-        },
-        { "transition": "Terminal" }
-      ]
-    },
-    "High_Risk_Encounter": {
-      "type": "Encounter",
-      "encounter_class": "inpatient",
-      "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Hospital admission" }],
-      "direct_transition": "High_Risk_Labs"
-    },
-    "High_Risk_Labs": {
-      "type": "DiagnosticReport",
-      "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Basic metabolic panel" }],
-      "observations": [
-        { "category": "laboratory", "unit": "g/dL", "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Albumin" }], "range": { "low": 1.8, "high": 2.5 } }
-      ],
-      "target_encounter": "High_Risk_Encounter",
-      "direct_transition": "High_Risk_Encounter_End"
-    },
-    "High_Risk_Encounter_End": { "type": "EncounterEnd", "direct_transition": "Terminal" },
-    "Moderate_Risk_Encounter": {
-      "type": "Encounter",
-      "encounter_class": "inpatient",
-      "codes": [{ "system": "SNOMED-CT", "code": "VALIDATE_ME", "display": "Hospital admission" }],
-      "direct_transition": "Moderate_Risk_Labs"
-    },
-    "Moderate_Risk_Labs": {
-      "type": "DiagnosticReport",
-      "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Basic metabolic panel" }],
-      "observations": [
-        { "category": "laboratory", "unit": "g/dL", "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Albumin" }], "range": { "low": 2.5, "high": 3.2 } }
-      ],
-      "target_encounter": "Moderate_Risk_Encounter",
-      "direct_transition": "Moderate_Risk_Encounter_End"
-    },
-    "Moderate_Risk_Encounter_End": { "type": "EncounterEnd", "direct_transition": "Terminal" },
-    "Terminal": { "type": "Terminal" }
-  },
-  "gmf_version": 2
-}
-```
-
-All `VALIDATE_ME` codes must be replaced with real validated codes before this module can run.
-
----
-
 ## Common pitfalls
-
-0. **Wrong archetype** — Using `distributed_transition` from `Initial` for an augmentation module inflates disease prevalence in the generated population. Augmentation modules must use `Guard` states or `conditional_transition` on `Active Condition`. Conversely, a disease module without a prevalence gate gives 100% of patients the condition.
 
 1. **Forgetting `target_encounter`** — ConditionOnset, Observation, Procedure, and MedicationOrder states need `"target_encounter": "Encounter_State_Name"` to link them to the active encounter. Without it, the resource is orphaned.
 
@@ -554,13 +342,6 @@ All `VALIDATE_ME` codes must be replaced with real validated codes before this m
 7. **Procedures need `duration`** — Add `"duration": { "low": N, "high": M, "unit": "minutes" }` to Procedure states. Without it, some exporters may skip them.
 
 8. **`assign_to_attribute` on ConditionOnset** — If procedures or medications reference the condition via `reason`, add `"assign_to_attribute": "condition_name"` to the ConditionOnset state so the reference resolves.
-
-## Project-specific reference files
-
-If the skill directory contains a `references/` folder, check it for project-specific code tables and value ranges before searching tx.fhir.org from scratch. These files contain pre-validated codes for the project's lab panels and clinical scenarios.
-
-Current references:
-- `references/hapi-labs.md` — HAPI DSE risk calculator lab panel (albumin, BUN, chloride, RDW-CV) with validated LOINC codes and per-archetype value ranges
 
 ## Related tools
 
