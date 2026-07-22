@@ -153,11 +153,11 @@ Note: when using `DiagnosticReport`, the inline observations are still individua
 
 For a general inpatient admission, the `Encounter` state needs a SNOMED class code. Always validate before use (see Code Grounding Rules below). Common candidates:
 
-| Encounter type       | Candidate SNOMED | Note                          |
-|----------------------|------------------|-------------------------------|
-| Inpatient admission  | validate via tx  | Search: "hospital admission"  |
-| Emergency encounter  | validate via tx  | Search: "emergency encounter" |
-| Ambulatory encounter | validate via tx  | Search: "outpatient encounter"|
+| Encounter type       | Candidate SNOMED | Note                           |
+|----------------------|------------------|--------------------------------|
+| Inpatient admission  | validate via tx  | Search: "hospital admission"   |
+| Emergency encounter  | validate via tx  | Search: "emergency encounter"  |
+| Ambulatory encounter | validate via tx  | Search: "outpatient encounter" |
 
 For `Encounter` states, also set `"encounter_class": "inpatient"` to ensure the exported FHIR resource has the correct class:
 
@@ -216,13 +216,31 @@ The "Requires codes?" column indicates whether the state type requires medical c
 
 ### Transition types
 
-**Direct** — always go to one state:
+The table below lists all state types in Synthea, extracted from [Transition class documentation](https://synthetichealth.github.io/synthea/build/javadoc/org/mitre/synthea/engine/Transition.html).
+Each transition type has a specific purpose and may require additional configuration options.
+
+| Type/key                          | Can be used? | Purpose                                                                                                                                                                                              |
+|-----------------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `complex_transition`              | Yes          | Complex transitions are a combination of direct, distributed, and conditional transitions.                                                                                                           |
+| `conditional_transition`          | Yes          | Conditional transitions will transition to one of several possible states based on conditional logic.                                                                                                |
+| `direct_transition`               | Yes          | Direct transitions are the simplest of transitions.                                                                                                                                                  |
+| `distributed_transition`          | Yes          | Distributed transitions will transition to one of several possible states based on the configured distribution.                                                                                      |
+| `lookup_table_key`                | No           | Represents a key for lookup tables, containing attributes, age, and time information.                                                                                                                |
+| `lookup_table_transition`         | No           | LookupTable transitions will transition to one of any number of possible states based on probabilities for each state extacted from a table.                                                         |
+| `named_distribution`              | No           | Helper class for distributions, which may either be a double, or a NamedDistribution with an attribute to fetch the desired probability from and a default.                                          |
+| `type_of_care_transition`         | No           | A transition that is based on the type of care that will follow.                                                                                                                                     |
+
+#### direct_transition
+
+Always goes to one state — the simplest transition.
 
 ```json
 "direct_transition": "Next_State"
 ```
 
-**Conditional** — branch on a condition:
+#### conditional_transition
+
+Branches based on logical conditions. The first condition that evaluates to true is taken. The last entry (no `condition`) is the default fallback.
 
 ```json
 "conditional_transition": [
@@ -231,7 +249,9 @@ The "Requires codes?" column indicates whether the state type requires medical c
 ]
 ```
 
-**Distributed** — probabilistic branching:
+#### distributed_transition
+
+Probabilistic branching. Distributions must sum to 1.0.
 
 ```json
 "distributed_transition": [
@@ -240,7 +260,15 @@ The "Requires codes?" column indicates whether the state type requires medical c
 ]
 ```
 
-**Complex** — conditions with distributions:
+Instead of a literal float, a distribution can reference a patient attribute (a `named_distribution`):
+
+```json
+{ "distribution": { "attribute": "my_risk_probability", "default": 0.05 }, "transition": "Gets_Disease" }
+```
+
+#### complex_transition
+
+Combination of conditional and distributed: each branch has an optional condition and a set of weighted distributions. The first condition that matches determines which distribution pool is used.
 
 ```json
 "complex_transition": [
