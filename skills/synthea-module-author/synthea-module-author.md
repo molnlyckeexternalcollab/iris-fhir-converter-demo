@@ -37,7 +37,7 @@ Choose the right archetype before writing any JSON. The two patterns are structu
 
 Models condition onset, progression, treatment, and resolution. Population-level prevalence is controlled by `distributed_transition` probabilities from `Initial`.
 
-```
+```text
 Initial → distributed (1% onset / 99% skip) → ConditionOnset → Encounter → Labs/Meds → EncounterEnd → Delay (monitoring loop) → Terminal
 ```
 
@@ -47,13 +47,14 @@ Use when: modeling a disease from scratch, adding a new condition pathway, or ex
 
 Does NOT model a disease. Runs against every patient, but uses `Guard` states to restrict actions to patients who already have relevant conditions or demographics. Emits observations or procedures into the patient record without altering disease prevalence.
 
-```
+```text
 Initial → Guard (age ≥ 55) → Guard (Active Condition: frailty/sepsis/heart failure) → Encounter (inpatient) → Observations → EncounterEnd → Terminal
 ```
 
 Use when: adding lab panels to patients with pre-existing conditions, generating contextual observations for test data pipelines, or augmenting FHIR output without modeling new disease prevalence.
 
 **Key differences from disease modules:**
+
 - No `distributed_transition` for onset — every patient who passes the Guard gets the observations
 - The encounter is created specifically for this module's purpose (the module owns it)
 - Multiple `Guard` states can be chained with `conditional_transition` to branch into risk archetypes (low/moderate/high)
@@ -366,12 +367,14 @@ If a module already exists, read it and tell the user what's there. Ask whether 
 First, decide which archetype applies (disease module vs contextual augmentation — see **Module Archetypes** above).
 
 **For disease modules**, understand:
+
 - Prevalence by age and sex (for transition probabilities)
 - Diagnostic criteria (what labs, imaging, or procedures confirm the diagnosis)
 - Standard treatment pathway (first-line meds, escalation, monitoring)
 - Condition progression (does it resolve? is it lifelong? what complications?)
 
 **For contextual augmentation modules**, understand:
+
 - What patient population should receive observations (age, conditions, encounter type)
 - What risk archetypes exist (e.g., low/moderate/high) and how to detect them from existing conditions
 - What observation values are clinically appropriate per archetype (get value ranges from clinical sources)
@@ -399,17 +402,20 @@ Write the module following the schema above. Place it in `synthea/src/main/resou
 Key patterns:
 
 **Disease modules:**
+
 - Start with an `Initial` state and an age/prevalence gate using `distributed_transition`
 - Calibrate probabilities against CDC/CMS prevalence data
 - End chronic conditions with a monitoring loop (`Delay` → `Encounter` → `Delay`)
 
 **Contextual augmentation modules:**
+
 - Start with `Initial` → `Guard` (age) → `Guard` or `conditional_transition` (active conditions) → `Encounter` → observations → `EncounterEnd` → `Terminal`
 - Do NOT use `distributed_transition` for onset — every patient meeting the Guard criteria gets the observations
 - Branch into risk archetypes using `conditional_transition` checking `Active Condition` codes
 - Use `SetAttribute` to label the risk tier (e.g., `"hapi_risk_tier": "high"`) if downstream extraction needs it
 
 **Both archetypes:**
+
 - Wrap clinical actions inside `Encounter`/`EncounterEnd` pairs
 - Use `target_encounter` on `ConditionOnset`, `Observation`, `DiagnosticReport`, `Procedure`, `MedicationOrder` to link them to the active encounter
 
@@ -560,6 +566,7 @@ All `VALIDATE_ME` codes must be replaced with real validated codes before this m
 If the skill directory contains a `references/` folder, check it for project-specific code tables and value ranges before searching tx.fhir.org from scratch. These files contain pre-validated codes for the project's lab panels and clinical scenarios.
 
 Current references:
+
 - `references/hapi-labs.md` — HAPI DSE risk calculator lab panel (albumin, BUN, chloride, RDW-CV) with validated LOINC codes and per-archetype value ranges
 
 ## Related tools
