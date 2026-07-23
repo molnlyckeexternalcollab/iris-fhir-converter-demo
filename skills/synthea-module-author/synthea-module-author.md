@@ -571,23 +571,26 @@ All `VALIDATE_ME` codes must be replaced with real validated codes before this m
 
 ## Common pitfalls
 
-0. **Wrong archetype** — Using `distributed_transition` from `Initial` for an augmentation module inflates disease prevalence in the generated population. Augmentation modules must use `Guard` states or `conditional_transition` on `Active Condition`. Conversely, a disease module without a prevalence gate gives 100% of patients the condition.
+- **Wrong archetype** — Using `distributed_transition` from `Initial` for an augmentation module inflates disease prevalence in the generated population. Augmentation modules must use `Guard` states or `conditional_transition` on `Active Condition`. Conversely, a disease module without a prevalence gate gives 100% of patients the condition.
+- **Age gate with `conditional_transition` instead of `Guard`** — If an augmentation module uses `conditional_transition` on age directly from `Initial` (e.g., `condition_type: Age, operator: >=, quantity: 55`), Synthea evaluates it **once at birth** (age 0). The patient immediately transitions to `Terminal` and never gets labs, even after turning 55. Always use a `Guard` state for age gates in augmentation modules: `Guard` blocks the patient and re-evaluates every timestep until the condition is true.
 
-1. **Forgetting `target_encounter`** — ConditionOnset, Observation, Procedure, and MedicationOrder states need `"target_encounter": "Encounter_State_Name"` to link them to the active encounter. Without it, the resource is orphaned.
+  ```json
+  "Initial": { "type": "Initial", "direct_transition": "Age_Guard" },
+  "Age_Guard": {
+    "type": "Guard",
+    "allow": { "condition_type": "Age", "operator": ">=", "quantity": 55, "unit": "years" },
+    "direct_transition": "Risk_Branch"
+  }
+  ```
 
-2. **Not ending encounters** — Every `Encounter` state needs a corresponding `EncounterEnd`. Without it, Synthea will error or produce corrupt bundles.
-
-3. **Prevalence miscalibration** — A `distributed_transition` with `0.01` means 1% of the population per timestep (default 1 week). Over a 70-year life, that's not 1% prevalence. Use Synthea's `"remarks"` to document your prevalence math.
-
-4. **Missing Terminal** — Every execution path must eventually reach a `Terminal` state or the module loops forever.
-
-5. **Code system names** — Synthea uses `"SNOMED-CT"` not `"http://snomed.info/sct"` in the `system` field. The URI goes in FHIR export, not in the module JSON.
-
-6. **`exporter.years_of_history` hides older events** — By default Synthea filters exported resources to recent history. If your module's procedures or early encounters are missing from the output, run with `--exporter.years_of_history=0` to keep everything.
-
-7. **Procedures need `duration`** — Add `"duration": { "low": N, "high": M, "unit": "minutes" }` to Procedure states. Without it, some exporters may skip them.
-
-8. **`assign_to_attribute` on ConditionOnset** — If procedures or medications reference the condition via `reason`, add `"assign_to_attribute": "condition_name"` to the ConditionOnset state so the reference resolves.
+- **Forgetting `target_encounter`** — ConditionOnset, Observation, Procedure, and MedicationOrder states need `"target_encounter": "Encounter_State_Name"` to link them to the active encounter. Without it, the resource is orphaned.
+- **Not ending encounters** — Every `Encounter` state needs a corresponding `EncounterEnd`. Without it, Synthea will error or produce corrupt bundles.
+- **Prevalence miscalibration** — A `distributed_transition` with `0.01` means 1% of the population per timestep (default 1 week). Over a 70-year life, that's not 1% prevalence. Use Synthea's `"remarks"` to document your prevalence math.
+- **Missing Terminal** — Every execution path must eventually reach a `Terminal` state or the module loops forever.
+- **Code system names** — Synthea uses `"SNOMED-CT"` not `"http://snomed.info/sct"` in the `system` field. The URI goes in FHIR export, not in the module JSON.
+- **`exporter.years_of_history` hides older events** — By default Synthea filters exported resources to recent history. If your module's procedures or early encounters are missing from the output, run with `--exporter.years_of_history=0` to keep everything.
+- **Procedures need `duration`** — Add `"duration": { "low": N, "high": M, "unit": "minutes" }` to Procedure states. Without it, some exporters may skip them.
+- **`assign_to_attribute` on ConditionOnset** — If procedures or medications reference the condition via `reason`, add `"assign_to_attribute": "condition_name"` to the ConditionOnset state so the reference resolves.
 
 ## Project-specific reference files
 
