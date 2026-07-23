@@ -1,0 +1,57 @@
+{
+  "name": "HAPI Vasopressin",
+  "remarks": [
+    "Contextual augmentation module for the HAPI DSE risk calculator test data pipeline.",
+    "Orders vasopressin (RxNorm 11149) for patients with active systemic infection or septic shock.",
+    "Vasopressin is a vasopressor used in distributive/septic shock to restore vascular tone.",
+    "The extraction script maps a MedicationRequest with this code to is_on_vasopressin=True.",
+    "All codes validated against tx.fhir.org on 2026-07-23."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Vasopressin_Guard"
+    },
+    "Vasopressin_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Systemic infection" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock" }]
+          }
+        ]
+      },
+      "direct_transition": "Inpatient_Encounter"
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }
+      ],
+      "direct_transition": "Vasopressin_Order"
+    },
+    "Vasopressin_Order": {
+      "type": "MedicationOrder",
+      "codes": [
+        { "system": "RxNorm", "code": "11149", "display": "vasopressin" }
+      ],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

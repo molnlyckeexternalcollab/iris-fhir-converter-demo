@@ -104,17 +104,44 @@ Use "missing" for any Braden sub-score that cannot be reliably derived.
 
 ---
 
+## Synthea modules location
+
+All 9 HAPI augmentation modules live in:
+```
+iris-fhir-converter-demo/src/DSE/synthea/
+  hapi_lab_observations.json
+  hapi_edema.json
+  hapi_vasopressin.json
+  hapi_cardio_sympathomimetics.json
+  hapi_central_line.json
+  hapi_tracheostomy.json
+  hapi_chest_tube.json
+  hapi_ostomy.json
+  hapi_ecmo.json
+  hapi_spinal_cord_injury.json
+```
+
 ## Synthea run command for HAPI test data
+
+Use `-d` to load the modules from `iris-fhir-converter-demo`. Always `rm output/fhir/*.json` first — Synthea appends, not overwrites.
 
 ```bash
 cd /Users/8826/Developer/misc/synthea
-./run_synthea -m hapi_lab_observations -p 200 --exporter.fhir.export=true \
-  --exporter.years_of_history=0 -a 55-90
+rm -f output/fhir/*.json
+./run_synthea -p 1000 -s 42 -a 55-85 --exporter.years_of_history=0 \
+  -d /Users/8826/Developer/misc/iris-fhir-converter-demo/src/DSE/synthea
 ```
 
 Output: `output/fhir/` — one FHIR Bundle JSON per patient.
 
-Check generated labs:
+Check all HAPI resources in one pass:
 ```bash
-jq -r '.entry[].resource | select(.resourceType=="Observation") | "\(.code.coding[0].code) \(.code.coding[0].display) = \(.valueQuantity.value) \(.valueQuantity.unit)"' output/fhir/*.json | sort | uniq -c
+jq -r '
+  .entry[].resource |
+  if .resourceType == "Condition" then "COND \(.code.coding[0].code) \(.code.coding[0].display)"
+  elif .resourceType == "Procedure" then "PROC \(.code.coding[0].code) \(.code.coding[0].display)"
+  elif .resourceType == "MedicationRequest" then "MED \(.medicationCodeableConcept.coding[0].code // "ref") \(.medicationCodeableConcept.coding[0].display // "")"
+  elif .resourceType == "Observation" then "OBS \(.code.coding[0].code)"
+  else empty end
+' output/fhir/*.json | grep -E "COND (84114007|248279007|91302008|76571007|79654002|90584004)|PROC (392230005|55622001|177788009|4044002|233573008)|MED (11149|3628|7512|3992|8163)" | sort | uniq -c
 ```

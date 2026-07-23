@@ -1,0 +1,55 @@
+{
+  "name": "HAPI Tracheostomy",
+  "remarks": [
+    "Augmentation module: adds a tracheostomy procedure for sepsis/septic shock patients.",
+    "Guards on Or[Sepsis 91302008, Septic shock 76571007] — fires when Synthea generates these conditions.",
+    "Sets has_tracheostomy=True in HAPI DSE extraction.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Tracheostomy_Guard"
+    },
+    "Tracheostomy_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Sepsis (disorder)" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock (disorder)" }]
+          }
+        ]
+      },
+      "direct_transition": "Inpatient_Encounter"
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission (procedure)" }
+      ],
+      "direct_transition": "Tracheostomy_Procedure"
+    },
+    "Tracheostomy_Procedure": {
+      "type": "Procedure",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "55622001", "display": "Tracheostomy, emergency procedure by transtracheal approach" }
+      ],
+      "duration": { "low": 30, "high": 60, "unit": "minutes" },
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

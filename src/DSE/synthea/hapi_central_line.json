@@ -1,0 +1,59 @@
+{
+  "name": "HAPI Central Line",
+  "remarks": [
+    "Contextual augmentation module for the HAPI DSE risk calculator test data pipeline.",
+    "Records a central venous catheterisation procedure (SNOMED 392230005) for patients with",
+    "active systemic infection or septic shock — the primary clinical indications for central",
+    "venous access for vasopressor/fluid resuscitation in the ICU.",
+    "The extraction script maps a Procedure with this SNOMED code to has_central_line=True.",
+    "All codes validated against tx.fhir.org on 2026-07-23."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Central_Line_Guard"
+    },
+    "Central_Line_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Systemic infection" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock" }]
+          }
+        ]
+      },
+      "direct_transition": "Inpatient_Encounter"
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }
+      ],
+      "direct_transition": "Central_Line_Procedure"
+    },
+    "Central_Line_Procedure": {
+      "type": "Procedure",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "392230005", "display": "Catheterisation of vein" }
+      ],
+      "duration": { "low": 30, "high": 60, "unit": "minutes" },
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

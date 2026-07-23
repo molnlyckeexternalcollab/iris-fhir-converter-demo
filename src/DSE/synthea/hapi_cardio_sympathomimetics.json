@@ -1,0 +1,90 @@
+{
+  "name": "HAPI Cardio Sympathomimetics",
+  "remarks": [
+    "Contextual augmentation module for the HAPI DSE risk calculator test data pipeline.",
+    "Orders one cardiovascular sympathomimetic medication for patients with sepsis or heart failure.",
+    "Uses a distributed_transition to vary the drug across the generated population:",
+    "  40% dopamine      (RxNorm 3628)  — older vasopressor, still used in some centres",
+    "  30% norepinephrine (RxNorm 7512) — first-line vasopressor for septic shock",
+    "  20% epinephrine   (RxNorm 3992)  — used in anaphylaxis / refractory shock",
+    "  10% phenylephrine (RxNorm 8163)  — used in vasodilatory shock",
+    "The extraction script flags is_on_cardio_sympathomimetic=True for any of these RxNorm codes.",
+    "All codes validated against tx.fhir.org on 2026-07-23."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Drug_Guard"
+    },
+    "Drug_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Systemic infection" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "84114007", "display": "Heart failure" }]
+          }
+        ]
+      },
+      "direct_transition": "Inpatient_Encounter"
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }
+      ],
+      "direct_transition": "Drug_Branch"
+    },
+    "Drug_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.40, "transition": "Dopamine_Order" },
+        { "distribution": 0.30, "transition": "Norepinephrine_Order" },
+        { "distribution": 0.20, "transition": "Epinephrine_Order" },
+        { "distribution": 0.10, "transition": "Phenylephrine_Order" }
+      ]
+    },
+    "Dopamine_Order": {
+      "type": "MedicationOrder",
+      "codes": [{ "system": "RxNorm", "code": "3628", "display": "dopamine" }],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Norepinephrine_Order": {
+      "type": "MedicationOrder",
+      "codes": [{ "system": "RxNorm", "code": "7512", "display": "norepinephrine" }],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Epinephrine_Order": {
+      "type": "MedicationOrder",
+      "codes": [{ "system": "RxNorm", "code": "3992", "display": "epinephrine" }],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Phenylephrine_Order": {
+      "type": "MedicationOrder",
+      "codes": [{ "system": "RxNorm", "code": "8163", "display": "phenylephrine" }],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}
