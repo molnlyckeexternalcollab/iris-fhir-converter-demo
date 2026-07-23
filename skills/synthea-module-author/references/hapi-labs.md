@@ -43,13 +43,21 @@ Panel grouping codes (for `DiagnosticReport` states):
 
 ## Validated SNOMED codes (conditions and encounter)
 
-| Concept          | SNOMED    | Canonical display (tx.fhir.org) | Archetype mapping     |
+| Concept          | SNOMED    | Canonical display (tx.fhir.org) | Used in module(s)     |
 |------------------|-----------|---------------------------------|-----------------------|
-| Systemic infection (sepsis) | 91302008 | Systemic infection     | High-risk             |
-| Septic shock     | 76571007  | Septic shock                    | High-risk (ICU)       |
-| Heart failure    | 84114007  | Heart failure                   | Moderate-risk         |
-| Frailty          | 248279007 | Frailty                         | Moderate-risk         |
-| Hospital admission | 32485007 | Hospital admission              | Encounter class       |
+| Systemic infection (sepsis) | 91302008 | Systemic infection | Lab high-risk guard; vasopressin/central-line/tracheostomy/chest-tube/ICU guard |
+| Septic shock     | 76571007  | Septic shock       | Same guards + ECMO    |
+| Heart failure    | 84114007  | Heart failure      | Lab moderate-risk guard; edema/cardio/GIM guard |
+| Frailty          | 248279007 | Frailty            | Edema/GIM guard       |
+| Hospital admission | 32485007 | Hospital admission | Encounter class (inpatient) |
+| Edema            | 79654002  | Edema              | hapi_edema ConditionOnset |
+| Spinal cord injury | 90584004 | Spinal cord injury | hapi_spinal_cord_injury ConditionOnset |
+| Intensive care unit | 309904001 | Intensive care unit | hapi_icu_admit ConditionOnset (avoids collision with CHF module) |
+| Catheterisation of vein | 392230005 | Catheterisation of vein | hapi_central_line Procedure |
+| Tracheostomy (emergency) | 55622001 | Tracheostomy, emergency procedure by transtracheal approach | hapi_tracheostomy Procedure |
+| Open pleural drainage | 177788009 | Open drainage of pleural cavity | hapi_chest_tube Procedure |
+| Permanent colostomy | 4044002 | Permanent colostomy | hapi_ostomy Procedure |
+| ECMO | 233573008 | ECMO - Extracorporeal membrane oxygenation | hapi_ecmo Procedure |
 
 **Note on `91302008`**: tx.fhir.org returns canonical display "Systemic infection". Synthea's existing sepsis modules may use display "Sepsis (disorder)" — this is acceptable since Synthea does not validate display strings, but document the discrepancy in the module's `remarks`.
 
@@ -106,20 +114,30 @@ Use "missing" for any Braden sub-score that cannot be reliably derived.
 
 ## Synthea modules location
 
-All 9 HAPI augmentation modules live in:
+All 12 HAPI augmentation modules live in:
 ```
 iris-fhir-converter-demo/src/DSE/synthea/
-  hapi_lab_observations.json
-  hapi_edema.json
-  hapi_vasopressin.json
-  hapi_cardio_sympathomimetics.json
-  hapi_central_line.json
-  hapi_tracheostomy.json
-  hapi_chest_tube.json
-  hapi_ostomy.json
-  hapi_ecmo.json
-  hapi_spinal_cord_injury.json
+  hapi_lab_observations.json        # Observations: albumin/BUN/chloride/RDW-CV
+  hapi_edema.json                   # ConditionOnset: SNOMED 79654002
+  hapi_vasopressin.json             # MedicationOrder: RxNorm 11149
+  hapi_cardio_sympathomimetics.json # MedicationOrder: RxNorm 3628/7512/3992/8163
+  hapi_central_line.json            # Procedure: SNOMED 392230005
+  hapi_tracheostomy.json            # Procedure: SNOMED 55622001
+  hapi_chest_tube.json              # Procedure: SNOMED 177788009
+  hapi_ostomy.json                  # Procedure: SNOMED 4044002 (5% prevalence, age>=55)
+  hapi_ecmo.json                    # Procedure: SNOMED 233573008
+  hapi_spinal_cord_injury.json      # ConditionOnset: SNOMED 90584004 (3% prevalence, age>=55)
+  hapi_icu_admit.json               # ConditionOnset: SNOMED 309904001 (sepsis/septic shock)
+  hapi_gim_service.json             # Observation: local code gim-service (HF/frailty, 60% branch)
 ```
+
+**Code collision note**: `hapi_icu_admit` uses `ConditionOnset` with SNOMED `309904001` (Intensive care unit)
+instead of `Procedure 305351004` (Admit to ITU) to avoid collision with Synthea's built-in
+`congestive_heart_failure` module which already records that procedure.
+
+**GIM service note**: No SNOMED procedure or finding code exists for "on GIM service".
+`hapi_gim_service` uses `Observation` with local system `http://hapi-dse.local/CodeSystem`
+code `gim-service`. The extraction script detects it by that system URI.
 
 ## Synthea run command for HAPI test data
 
@@ -143,5 +161,26 @@ jq -r '
   elif .resourceType == "MedicationRequest" then "MED \(.medicationCodeableConcept.coding[0].code // "ref") \(.medicationCodeableConcept.coding[0].display // "")"
   elif .resourceType == "Observation" then "OBS \(.code.coding[0].code)"
   else empty end
-' output/fhir/*.json | grep -E "COND (84114007|248279007|91302008|76571007|79654002|90584004)|PROC (392230005|55622001|177788009|4044002|233573008)|MED (11149|3628|7512|3992|8163)" | sort | uniq -c
+' output/fhir/*.json | grep -E \
+  "COND (84114007|248279007|91302008|76571007|79654002|90584004|309904001)|\
+PROC (392230005|55622001|177788009|4044002|233573008)|\
+MED (11149|3628|7512|3992|8163)|\
+OBS gim-service" | sort | uniq -c
 ```
+
+Expected resource types per module:
+
+| Module | Resource type | Code to grep |
+|---|---|---|
+| hapi_lab_observations | Observation | 1751-7, 3094-0, 2075-0, 788-0 |
+| hapi_edema | Condition | 79654002 |
+| hapi_vasopressin | MedicationRequest | 11149 |
+| hapi_cardio_sympathomimetics | MedicationRequest | 3628, 7512, 3992, 8163 |
+| hapi_central_line | Procedure | 392230005 |
+| hapi_tracheostomy | Procedure | 55622001 |
+| hapi_chest_tube | Procedure | 177788009 |
+| hapi_ostomy | Procedure | 4044002 |
+| hapi_ecmo | Procedure | 233573008 |
+| hapi_spinal_cord_injury | Condition | 90584004 |
+| hapi_icu_admit | Condition | 309904001 |
+| hapi_gim_service | Observation | gim-service (system: http://hapi-dse.local/CodeSystem) |
