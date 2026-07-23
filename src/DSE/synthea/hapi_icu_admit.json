@@ -3,10 +3,12 @@
   "remarks": [
     "Augmentation module: marks ICU admission for sepsis/septic shock patients.",
     "Guards on Or[Sepsis 91302008, Septic shock 76571007].",
-    "Uses a local synthetic ConditionOnset (system: http://hapi-dse.local/CodeSystem, code: icu-admit)",
-    "to avoid code collision with the congestive_heart_failure module which already uses",
-    "SNOMED 305351004 (Admit to ITU) as a Procedure.",
-    "Sets is_icu_admitted=True in HAPI DSE extraction by detecting this condition code."
+    "Uses ConditionOnset with SNOMED 309904001 (Intensive care unit) — a location/finding",
+    "concept — to avoid collision with congestive_heart_failure module which uses",
+    "SNOMED 305351004 (Admit to ITU) as a Procedure resource.",
+    "Sets is_icu_admitted=True in HAPI DSE extraction by detecting Condition 309904001.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
+    "  SNOMED 309904001: Intensive care unit"
   ],
   "states": {
     "Initial": {
@@ -33,11 +35,7 @@
     "ICU_Condition": {
       "type": "ConditionOnset",
       "codes": [
-        {
-          "system": "http://hapi-dse.local/CodeSystem",
-          "code": "icu-admit",
-          "display": "Patient admitted to intensive care unit"
-        }
+        { "system": "SNOMED-CT", "code": "309904001", "display": "Intensive care unit" }
       ],
       "assign_to_attribute": "hapi_icu_admit",
       "direct_transition": "Terminal"
