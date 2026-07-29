@@ -49,3 +49,14 @@ class FhirResponse(Message):
     content: str
     headers: dict = field(default_factory=dict)
     resource: str = ''
+
+@dataclass
+class FHIRDataLoaderRequest(Message):
+    """Manual trigger message for FHIRDataLoaderService.
+
+    Send this from the production UI (Test button) to kick off an
+    immediate import run regardless of the scheduled CallInterval.
+    All fields are informational only — the service uses its own
+    configured settings when this message is received.
+    """
+    reason: str = field(default="manual")
