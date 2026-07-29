@@ -303,11 +303,11 @@ class FHIRDataLoaderOperation(BusinessOperation):
     file_limit: str = ""
     """Limit to the first N files per run. Empty string = no limit (pFileLimit)."""
 
-    num_workers: int = 1
+    num_workers: int = 0
     """
-    Number of parallel work queue jobs.
-    1 (default) = synchronous — SubmitResourceFiles blocks until all files are loaded.
-    >1 = async workers — method returns immediately; overlap is detected via log_global.
+    Number of parallel work queue jobs allocated by %SYSTEM.WorkMgr.
+    0 (default) = use the system default (mirrors the DataLoader ObjectScript default).
+    Set to a positive integer to pin a specific worker count.
     """
 
     recursive: bool = False
@@ -322,7 +322,7 @@ class FHIRDataLoaderOperation(BusinessOperation):
     translate_table: str = "UTF8"
     """Character encoding of input files (pTranslateTable)."""
 
-    log_global: str = "^EAIFHIRImport"
+    log_global: str = "^EAIFHIRDataLoader"
     """
     Name of the IRIS global used to record run statistics and status.
     Also used for overlap detection: a run is skipped if job_id still shows
@@ -330,7 +330,7 @@ class FHIRDataLoaderOperation(BusinessOperation):
     Set to "" to disable logging and overlap detection.
     """
 
-    job_id: str = "EAIFHIRImport"
+    job_id: str = "EAIFHIRDataLoader"
     """
     Fixed key written into log_global for each run (pJobId).
     Each run overwrites the previous stats, enabling reliable overlap detection
@@ -357,10 +357,15 @@ class FHIRDataLoaderOperation(BusinessOperation):
         if status_obj is not None:
             self._log_last_run_stats(status_obj)
 
+        num_workers = (
+            iris.cls("%SYSTEM.WorkMgr").DefaultNumWorkers()
+            if self.num_workers == 0
+            else self.num_workers
+        )
         self.log_info(
             f"Starting FHIR file import (trigger={request.reason!r}) "
             f"dir='{self.input_directory}' service_type='{self.service_type}' "
-            f"service_name='{self.service_name}' workers={self.num_workers} "
+            f"service_name='{self.service_name}' workers={num_workers} "
             f"recursive={self.recursive} clean_up={self.clean_up} "
             f"file_limit={self.file_limit!r}"
         )
@@ -373,7 +378,7 @@ class FHIRDataLoaderOperation(BusinessOperation):
                 self.log_global,        # pLogGlobal    (stats + overlap tracking)
                 self.file_limit,        # pFileLimit    ("" = no limit)
                 self.translate_table,   # pTranslateTable
-                self.num_workers,       # pNumWorkers
+                num_workers,            # pNumWorkers
                 self.job_id,            # pJobId        (user-specified fixed key)
                 self.recursive,         # pRecursive
                 self.clean_up,          # pCleanUp      (WARNING: deletes InputDirectory!)
