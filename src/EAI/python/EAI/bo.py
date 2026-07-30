@@ -303,6 +303,14 @@ class FHIRDataLoaderOperation(BusinessOperation):
     file_limit: str = ""
     """Limit to the first N files per run. Empty string = no limit (pFileLimit)."""
 
+    display_progress: bool = False
+    """
+    Pass pDisplayProgress=1 to DataLoader, which writes progress messages to the
+    IRIS console/terminal output. Defaults to False because the operation already
+    emits structured log entries via log_info / log_warning.
+    Enable temporarily when debugging a new configuration from an IRIS terminal.
+    """
+
     num_workers: int = 0
     """
     Number of parallel work queue jobs allocated by %SYSTEM.WorkMgr.
@@ -343,16 +351,24 @@ class FHIRDataLoaderOperation(BusinessOperation):
         """Triggered by FHIRDataLoaderService (scheduled or manual)."""
         status_obj = self._get_job_status()
         if status_obj is not None and status_obj._Get("status") == "Running":
+            if self._is_process_alive(status_obj._Get("processId")):
+                self.log_warning(
+                    f"Import job '{self.job_id}' is still running "
+                    f"(trigger={request.reason!r}) — skipping. "
+                    f"Progress so far: files={status_obj._Get('filesTotal')} "
+                    f"resources={status_obj._Get('resourcesTotal')} "
+                    f"elapsed={status_obj._Get('elapsedTotal')}s "
+                    f"started={status_obj._Get('started')}. "
+                    "Increase CallInterval or reduce file count / num_workers."
+                )
+                return
+            # Process is dead but status was never updated (e.g. <EXTERNAL INTERRUPT>).
+            # Treat as stale and allow a new run.
             self.log_warning(
-                f"Import job '{self.job_id}' is still running "
-                f"(trigger={request.reason!r}) — skipping. "
-                f"Progress so far: files={status_obj._Get('filesTotal')} "
-                f"resources={status_obj._Get('resourcesTotal')} "
-                f"elapsed={status_obj._Get('elapsedTotal')}s "
-                f"started={status_obj._Get('started')}. "
-                "Increase CallInterval or reduce file count / num_workers."
+                f"Import job '{self.job_id}' has stale 'Running' status — "
+                f"process {status_obj._Get('processId')!r} is no longer alive "
+                f"(likely killed or interrupted). Proceeding with new run."
             )
-            return
 
         if status_obj is not None:
             self._log_last_run_stats(status_obj)
@@ -369,12 +385,20 @@ class FHIRDataLoaderOperation(BusinessOperation):
             f"recursive={self.recursive} clean_up={self.clean_up} "
             f"file_limit={self.file_limit!r}"
         )
+        file_limit_os = f'"{self.file_limit}"' if self.file_limit else '""'
+        self.log_info(
+            f"Equivalent ObjectScript: "
+            f'do ##class(HS.FHIRServer.Tools.DataLoader).SubmitResourceFiles('
+            f'"{self.input_directory}", "{self.service_type}", "{self.service_name}", '
+            f'{int(self.display_progress)}, "{self.log_global}", {file_limit_os}, "{self.translate_table}", '
+            f'{num_workers}, "{self.job_id}", {int(self.recursive)}, {int(self.clean_up)})'
+        )
         try:
             sc = iris.cls("HS.FHIRServer.Tools.DataLoader").SubmitResourceFiles(
                 self.input_directory,   # pInputDirectory
                 self.service_type,      # pServiceType  ("FHIRSERVER" | "HTTP")
                 self.service_name,      # pServiceName
-                1,                      # pDisplayProgress
+                int(self.display_progress),  # pDisplayProgress
                 self.log_global,        # pLogGlobal    (stats + overlap tracking)
                 self.file_limit,        # pFileLimit    ("" = no limit)
                 self.translate_table,   # pTranslateTable
@@ -401,6 +425,22 @@ class FHIRDataLoaderOperation(BusinessOperation):
             return iris.cls("HS.FHIRServer.Tools.DataLoader").Status(self.job_id)
         except Exception:
             return None
+
+    def _is_process_alive(self, process_id_str) -> bool:
+        """Return True if the process is confirmed running, False if confirmed dead.
+
+        Uses %SYS.ProcessQuery to check whether the recorded process ID still
+        exists. When the check itself fails (e.g. insufficient privilege), returns
+        True conservatively to avoid accidentally starting parallel imports.
+        """
+        if not process_id_str:
+            return True  # no PID recorded → can't verify → conservative
+        try:
+            pq = iris.cls("%SYS.ProcessQuery")._OpenId(int(process_id_str))
+            # _OpenId returns "" (IRIS nil) when the ID does not exist
+            return bool(pq)
+        except Exception:
+            return True  # can't verify → conservative
 
     def _log_last_run_stats(self, status_obj) -> None:
         """Log statistics from the previous completed DataLoader run."""

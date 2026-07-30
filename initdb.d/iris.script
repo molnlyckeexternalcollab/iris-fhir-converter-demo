@@ -22,7 +22,7 @@
     set fhirServerStrategy = $SYSTEM.Util.GetEnviron("FHIR_SERVER_STRATEGY")
 
     write:(fhirServerEnable) "[ INFO ] Enabling FHIR server at path "_fhirServerPath_" with version "_fhirServerVersion_" and strategy "_fhirServerStrategy, !
-    do:(fhirServerEnable) ##class(HS.FHIRServer.Installer).InstallInstance(fhirServerPath, fhirServerStrategy, fhirServerVersion, "", 0)
+    do:(fhirServerEnable) ##class(HS.FHIRServer.Installer).InstallInstance(fhirServerPath, fhirServerStrategy, fhirServerVersion, "", "Endpoint description",,,, "Pre-configured FHIR Server")
     write:(fhirServerEnable) "[  OK  ] FHIR Server is enabled", !
 
     write:('fhirServerEnable) "[ WARN ] FHIR server not enabled. To enable, set environment variable FHIR_SERVER_ENABLE=1", !
