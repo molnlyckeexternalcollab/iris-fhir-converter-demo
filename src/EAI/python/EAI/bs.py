@@ -39,7 +39,7 @@ class FHIRDataLoaderService(PollingBusinessService):
     Output = target("BO.FHIRDataLoader")
     """Route to the operation that calls SubmitResourceFiles."""
 
-    job_id: str = "EAIFHIRImport"
+    job_id: str = "EAIFHIRDataLoader"
     """
     DataLoader job ID to poll for live progress reporting.
     Must match the job_id setting on FHIRDataLoaderOperation.
