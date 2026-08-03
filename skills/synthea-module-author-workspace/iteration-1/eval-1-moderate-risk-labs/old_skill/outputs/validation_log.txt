@@ -1,0 +1,82 @@
+Code Validation Log — Moderate Risk Labs Module (HF/Frailty)
+Generated: 2026-07-22
+Source: tx.fhir.org FHIR R4 CodeSystem/$validate-code
+
+=============================================================
+LOINC CODES
+=============================================================
+
+Code:    1751-7
+System:  http://loinc.org
+Intent:  Albumin in serum/plasma
+Result:  VALID (valueBoolean: true)
+Display: "Albumin [Mass/volume] in Serum or Plasma"
+Match:   YES — canonical display matches intent
+
+---
+
+Code:    3094-0
+System:  http://loinc.org
+Intent:  Blood urea nitrogen (BUN) in serum/plasma
+Result:  VALID (valueBoolean: true)
+Display: "Urea nitrogen [Mass/volume] in Serum or Plasma"
+Match:   YES — canonical display matches intent
+
+---
+
+Code:    2075-0
+System:  http://loinc.org
+Intent:  Chloride in serum/plasma
+Result:  VALID (valueBoolean: true)
+Display: "Chloride [Moles/volume] in Serum or Plasma"
+Match:   YES — canonical display matches intent
+
+---
+
+Code:    788-0
+System:  http://loinc.org
+Intent:  RDW-CV (red cell distribution width, coefficient of variation)
+Result:  VALID (valueBoolean: true)
+Display: "Erythrocyte [DistWidth] in Blood by Automated count"
+Match:   YES — this is the standard RDW (ratio/CV) LOINC code; display confirmed correct
+
+=============================================================
+SNOMED-CT CODES
+=============================================================
+
+Code:    84114007
+System:  http://snomed.info/sct
+Intent:  Heart failure (as eligibility condition)
+Result:  VALID (valueBoolean: true)
+Display: "Heart failure"
+Match:   YES — canonical display matches intent
+
+---
+
+Code:    248279007
+System:  http://snomed.info/sct
+Intent:  Frailty (as eligibility condition)
+Result:  VALID (valueBoolean: true)
+Display: "Frailty"
+Match:   YES — canonical display matches intent
+
+---
+
+Code:    185347001
+System:  http://snomed.info/sct
+Intent:  Ambulatory encounter for problem (lab visit)
+Result:  VALID (valueBoolean: true)
+Display: "Encounter for problem"
+Match:   YES — canonical display matches intent
+
+=============================================================
+SUMMARY
+=============================================================
+
+Total codes validated: 7
+  LOINC:     4 (1751-7, 3094-0, 2075-0, 788-0)
+  SNOMED-CT: 3 (84114007, 248279007, 185347001)
+
+All codes: VALID
+All display names: CONFIRMED to match intended clinical concepts
+No hallucinated codes used.

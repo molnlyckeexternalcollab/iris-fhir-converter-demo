@@ -1,0 +1,45 @@
+{
+  "name": "HAPI Edema",
+  "remarks": [
+    "Contextual augmentation module for the HAPI DSE risk calculator test data pipeline.",
+    "Adds an Edema condition (SNOMED 79654002) to patients who have active heart failure or frailty.",
+    "No age gate — edema can occur at any age with these conditions.",
+    "The extraction script maps this Condition to has_edema=True.",
+    "All codes validated against tx.fhir.org on 2026-07-23."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Edema_Guard"
+    },
+    "Edema_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "84114007", "display": "Heart failure" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "248279007", "display": "Frailty" }]
+          }
+        ]
+      },
+      "direct_transition": "Edema_Onset"
+    },
+    "Edema_Onset": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "hapi_edema",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "79654002", "display": "Edema" }
+      ],
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

@@ -1,0 +1,47 @@
+{
+  "name": "HAPI ICU Admission",
+  "remarks": [
+    "Augmentation module: marks ICU admission for sepsis/septic shock patients.",
+    "Guards on Or[Sepsis 91302008, Septic shock 76571007].",
+    "Uses ConditionOnset with SNOMED 309904001 (Intensive care unit) — a location/finding",
+    "concept — to avoid collision with congestive_heart_failure module which uses",
+    "SNOMED 305351004 (Admit to ITU) as a Procedure resource.",
+    "Sets is_icu_admitted=True in HAPI DSE extraction by detecting Condition 309904001.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
+    "  SNOMED 309904001: Intensive care unit"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "ICU_Guard"
+    },
+    "ICU_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Sepsis (disorder)" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock (disorder)" }]
+          }
+        ]
+      },
+      "direct_transition": "ICU_Condition"
+    },
+    "ICU_Condition": {
+      "type": "ConditionOnset",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "309904001", "display": "Intensive care unit" }
+      ],
+      "assign_to_attribute": "hapi_icu_admit",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

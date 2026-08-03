@@ -1,0 +1,45 @@
+{
+  "name": "HAPI Spinal Cord Injury",
+  "remarks": [
+    "Augmentation module: adds spinal cord injury condition to 3% of patients aged ≥55.",
+    "Uses Age Guard then probability branch — no reliable spinal trauma trigger in stock Synthea modules.",
+    "No encounter needed: ConditionOnset records the condition directly.",
+    "Sets has_spinal_cord_injury=True in HAPI DSE extraction.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
+    "  SNOMED 90584004: Spinal cord injury"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 55,
+        "unit": "years"
+      },
+      "direct_transition": "Injury_Branch"
+    },
+    "Injury_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.03, "transition": "Spinal_Cord_Injury_Onset" },
+        { "distribution": 0.97, "transition": "Terminal" }
+      ]
+    },
+    "Spinal_Cord_Injury_Onset": {
+      "type": "ConditionOnset",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "90584004", "display": "Spinal cord injury" }
+      ],
+      "assign_to_attribute": "hapi_spinal_cord_injury",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "HAPI ECMO",
+  "remarks": [
+    "Augmentation module: adds ECMO procedure for septic shock patients.",
+    "Guards on Septic shock 76571007 only (more severe trigger than sepsis alone).",
+    "Sets is_on_ecmo=True in HAPI DSE extraction.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
+    "  SNOMED 233573008: ECMO - Extracorporeal membrane oxygenation",
+    "  SNOMED 76571007: Septic shock"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "ECMO_Guard"
+    },
+    "ECMO_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Active Condition",
+        "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock (disorder)" }]
+      },
+      "direct_transition": "Inpatient_Encounter"
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission (procedure)" }
+      ],
+      "direct_transition": "ECMO_Procedure"
+    },
+    "ECMO_Procedure": {
+      "type": "Procedure",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "233573008", "display": "ECMO - Extracorporeal membrane oxygenation" }
+      ],
+      "duration": { "low": 2880, "high": 4320, "unit": "minutes" },
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

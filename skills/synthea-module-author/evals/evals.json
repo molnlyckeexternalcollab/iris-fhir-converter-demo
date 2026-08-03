@@ -1,0 +1,113 @@
+{
+  "skill_name": "synthea-module-author",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a Synthea module that emits albumin, BUN, chloride, and RDW-CV lab observations for patients age 55 or older who have heart failure or frailty. Use clinically appropriate value ranges for this population. Validate all codes against tx.fhir.org before writing the module JSON.",
+      "expected_output": "A valid Synthea module JSON file using the contextual augmentation archetype (Guard-based, not disease prevalence). Must contain: age Guard (>=55), Active Condition check for heart failure (84114007) or frailty (248279007), an inpatient Encounter state, four Observation or DiagnosticReport states for albumin (1751-7), BUN (3094-0), chloride (2075-0), RDW-CV (788-0), an EncounterEnd state, a Terminal state, gmf_version:2, and remarks documenting the design. All codes must be verified with tx.fhir.org curl commands before writing.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_augmentation_archetype",
+          "description": "Module uses Guard or conditional_transition for patient selection, NOT distributed_transition from Initial for disease onset"
+        },
+        {
+          "name": "has_age_guard",
+          "description": "Module contains a Guard or conditional_transition that checks age >= 55"
+        },
+        {
+          "name": "has_active_condition_check",
+          "description": "Module checks for Active Condition (heart failure or frailty) before emitting observations"
+        },
+        {
+          "name": "has_all_four_lab_loinc_codes",
+          "description": "Module JSON contains all four LOINC codes: 1751-7, 3094-0, 2075-0, 788-0"
+        },
+        {
+          "name": "codes_validated_before_writing",
+          "description": "Agent ran tx.fhir.org validation curl commands for all codes before writing the final module JSON"
+        },
+        {
+          "name": "has_encounter_and_encounter_end",
+          "description": "Module has at least one Encounter state and a corresponding EncounterEnd state"
+        },
+        {
+          "name": "has_value_ranges",
+          "description": "Observation states use range with clinically appropriate low/high values for the population"
+        },
+        {
+          "name": "has_terminal_state",
+          "description": "Module has a Terminal state reachable from all paths"
+        },
+        {
+          "name": "has_gmf_version_2",
+          "description": "Module JSON contains gmf_version: 2"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a Synthea module for sepsis with realistic lab observations. Patients who develop sepsis should have markedly low albumin (1.5-2.2 g/dL), elevated BUN (40-80 mg/dL), low-normal chloride (92-99 mEq/L), and elevated RDW-CV (16-20%). Use LOINC codes for the labs. Validate all codes.",
+      "expected_output": "A valid Synthea module JSON with a ConditionOnset for systemic infection/sepsis (SNOMED 91302008, display from tx.fhir.org), an inpatient Encounter, four lab Observations or a DiagnosticReport with correct LOINC codes and the specified value ranges, EncounterEnd, and Terminal. The agent must validate all codes via tx.fhir.org before writing.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "has_condition_onset_with_snomed",
+          "description": "Module has a ConditionOnset state with a SNOMED-CT code for sepsis/systemic infection"
+        },
+        {
+          "name": "albumin_high_risk_range",
+          "description": "Albumin observation has range.low between 1.5-2.0 and range.high between 2.0-2.5"
+        },
+        {
+          "name": "bun_high_risk_range",
+          "description": "BUN observation has range.low >= 35 and range.high >= 60"
+        },
+        {
+          "name": "all_four_loinc_codes_present",
+          "description": "All four LOINC codes 1751-7, 3094-0, 2075-0, 788-0 are present in the module"
+        },
+        {
+          "name": "codes_validated",
+          "description": "Agent ran tx.fhir.org validation before writing codes into the module"
+        },
+        {
+          "name": "valid_json_structure",
+          "description": "Output is valid JSON with name, states, gmf_version keys"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to add a Synthea module that branches between three risk archetypes for elderly inpatients: high-risk (sepsis), moderate-risk (heart failure), and low-risk (neither). Each archetype should have different albumin and BUN lab values. Validate codes before writing the module.",
+      "expected_output": "A valid Synthea module with three distinct encounter+observation branches reachable via conditional_transition on Active Condition checks. The high-risk branch has lower albumin and higher BUN than the moderate-risk branch. The low-risk branch has near-normal values. Module uses the augmentation archetype (no disease prevalence gate). All codes validated.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "has_three_branches",
+          "description": "Module contains three separate encounter paths (high/moderate/low risk) or equivalent branching logic"
+        },
+        {
+          "name": "high_risk_lower_albumin_than_moderate",
+          "description": "High-risk branch albumin range.high < moderate-risk branch albumin range.low"
+        },
+        {
+          "name": "high_risk_higher_bun_than_moderate",
+          "description": "High-risk branch BUN range.low > moderate-risk branch BUN range.high"
+        },
+        {
+          "name": "uses_active_condition_branching",
+          "description": "Module uses Active Condition condition_type to detect sepsis and heart failure"
+        },
+        {
+          "name": "all_loinc_codes_present",
+          "description": "LOINC codes 1751-7 and 3094-0 appear in every branch"
+        },
+        {
+          "name": "codes_validated_before_writing",
+          "description": "Agent ran tx.fhir.org validation curl commands for all SNOMED and LOINC codes used"
+        }
+      ]
+    }
+  ]
+}

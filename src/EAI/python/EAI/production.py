@@ -14,12 +14,14 @@ The production also includes a RandomRestOperation for testing external API inte
 import os
 
 from iop import Production
+from EAI.bs import FHIRDataLoaderService
 from EAI.bp import FhirConverterProcess
 from EAI.bo import (
     FhirConverterOperation,
     FhirFileDropOperation,
     FhirHttpOperation,
-    HttpOperation
+    HttpOperation,
+    FHIRDataLoaderOperation
 )
 
 # Define the production topology using IoP 4.0 API
@@ -28,6 +30,13 @@ prod = Production(
     description='HL7v2 to FHIR conversion pipeline',
     testing_enabled=True,
     log_general_trace_events=False,
+)
+
+# Define services
+fhir_import_service = prod.service('BS.FHIRDataLoader', FHIRDataLoaderService, enabled=False,
+    adapter_settings={
+        'CallInterval': 3600
+    },
 )
 
 # Define operations
@@ -40,6 +49,9 @@ fhir_http_op = prod.operation(
         'credential': 'SuperUser',
     },
 )
+
+fhir_import_operation = prod.operation('BO.FHIRDataLoader', FHIRDataLoaderOperation)
+
 
 file_drop_op = prod.operation(FhirFileDropOperation)
 
@@ -80,4 +92,5 @@ prod.connect(converter_proc.converter_target, converter_op)
 prod.connect(converter_proc.file_target, file_drop_op)
 prod.connect(converter_proc.fhir_target, fhir_http_op)
 prod.connect(converter_proc.hapi_risk_target, hapi_risk_operation)
+fhir_import_service.connect(FHIRDataLoaderService.Output, fhir_import_operation)
 

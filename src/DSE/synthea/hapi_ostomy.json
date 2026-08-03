@@ -1,0 +1,57 @@
+{
+  "name": "HAPI Ostomy",
+  "remarks": [
+    "Augmentation module: adds a permanent colostomy procedure to 5% of patients aged ≥55.",
+    "Uses Age Guard then probability branch — no reliable IBD/colorectal trigger from stock Synthea modules.",
+    "Sets has_ostomy=True in HAPI DSE extraction.",
+    "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
+    "  SNOMED 4044002: Permanent colostomy",
+    "  SNOMED 32485007: Hospital admission"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 55,
+        "unit": "years"
+      },
+      "direct_transition": "Ostomy_Branch"
+    },
+    "Ostomy_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.05, "transition": "Inpatient_Encounter" },
+        { "distribution": 0.95, "transition": "Terminal" }
+      ]
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission (procedure)" }
+      ],
+      "direct_transition": "Ostomy_Procedure"
+    },
+    "Ostomy_Procedure": {
+      "type": "Procedure",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "4044002", "display": "Permanent colostomy" }
+      ],
+      "duration": { "low": 120, "high": 180, "unit": "minutes" },
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

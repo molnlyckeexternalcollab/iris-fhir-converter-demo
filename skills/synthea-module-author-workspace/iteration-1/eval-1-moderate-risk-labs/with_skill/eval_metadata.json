@@ -1,0 +1,55 @@
+{
+  "eval_id": 1,
+  "eval_name": "moderate-risk-labs",
+  "prompt": "Create a Synthea module that emits albumin, BUN, chloride, and RDW-CV lab observations for patients age 55 or older who have heart failure or frailty. Use clinically appropriate value ranges for this population. Validate all codes against tx.fhir.org before writing the module JSON.",
+  "assertions": [
+    {
+      "name": "uses_augmentation_archetype",
+      "description": "Module uses Guard or conditional_transition for patient selection, NOT distributed_transition from Initial for disease onset"
+    },
+    {
+      "name": "has_age_guard",
+      "description": "Module contains a Guard or conditional_transition that checks age >= 55"
+    },
+    {
+      "name": "has_active_condition_check",
+      "description": "Module checks for Active Condition (heart failure or frailty) before emitting observations"
+    },
+    {
+      "name": "has_all_four_lab_loinc_codes",
+      "description": "Module JSON contains all four LOINC codes: 1751-7, 3094-0, 2075-0, 788-0"
+    },
+    {
+      "name": "codes_validated_before_writing",
+      "description": "Agent ran tx.fhir.org validation curl commands for all codes before writing the final module JSON"
+    },
+    {
+      "name": "has_encounter_and_encounter_end",
+      "description": "Module has at least one Encounter state and a corresponding EncounterEnd state"
+    },
+    {
+      "name": "has_value_ranges",
+      "description": "Observation states use range with clinically appropriate low/high values for the population"
+    },
+    {
+      "name": "has_terminal_state",
+      "description": "Module has a Terminal state reachable from all paths"
+    },
+    {
+      "name": "has_gmf_version_2",
+      "description": "Module JSON contains gmf_version: 2"
+    },
+    {
+      "name": "no_spurious_monitoring_loop",
+      "description": "Augmentation module does NOT add an annual Delay loop — it emits once and terminates"
+    },
+    {
+      "name": "uses_inpatient_encounter",
+      "description": "Encounter state uses encounter_class inpatient (not ambulatory) for this clinical context"
+    },
+    {
+      "name": "uses_archetype_specific_value_ranges",
+      "description": "Value ranges match the moderate-risk archetype: albumin 2.5-3.2, BUN 22-35, not wider generic ranges"
+    }
+  ]
+}

@@ -22,7 +22,7 @@
     set fhirServerStrategy = $SYSTEM.Util.GetEnviron("FHIR_SERVER_STRATEGY")
 
     write:(fhirServerEnable) "[ INFO ] Enabling FHIR server at path "_fhirServerPath_" with version "_fhirServerVersion_" and strategy "_fhirServerStrategy, !
-    do:(fhirServerEnable) ##class(HS.FHIRServer.Installer).InstallInstance(fhirServerPath, fhirServerStrategy, fhirServerVersion, "", 0)
+    do:(fhirServerEnable) ##class(HS.FHIRServer.Installer).InstallInstance(fhirServerPath, fhirServerStrategy, fhirServerVersion, "", "Endpoint description",,,, "Pre-configured FHIR Server")
     write:(fhirServerEnable) "[  OK  ] FHIR Server is enabled", !
 
     write:('fhirServerEnable) "[ WARN ] FHIR server not enabled. To enable, set environment variable FHIR_SERVER_ENABLE=1", !
@@ -36,12 +36,31 @@
     // Install a FHIR Adapter, see https://docs.intersystems.com/irisforhealth20261/csp/docbook/DocBook.UI.Page.cls?KEY=HXFHIRPROD_fhir_adapter#HXFHIRPROD_fhir_adapter_install_noOAuth
     zw ##class(HS.FHIRServer.Installer).InteropAdapterConfig("/proxy/fhir")
 
+    // Registry entries "fhir-internal-webgateway" for same network through webgateway, no external hop and basic credentials and localhost.
+    set cred = ##class(Ens.Config.Credentials).%New()
+    set cred.SystemName = "fhir-superuser"
+    set cred.Username = "SuperUser"
+    set cred.Password = "SYS"
+    do cred.%Save()
+
     set service = ##class(HS.Registry.Service.HTTP).%New()
-    set service.Name = "fhir"
+    set service.Name = "fhir-internal-webgateway"
     set service.URL = fhirServerPath
     set service.Host = "webgateway"
-    set service.Port = 8081
+    set service.Port = 80
     set service.Type = "HTTP"
+    set service.HTTPCredentialsConfig = "fhir-superuser"
+    do service.%Save()
+
+    // Community Edition only: the private web server on port 52773 is included for convenience.
+    // Licensed images 2023.2+ have no private web server — use fhir-internal-webgateway instead.
+    set service = ##class(HS.Registry.Service.HTTP).%New()
+    set service.Name = "fhir-localhost"
+    set service.URL = fhirServerPath
+    set service.Host = "localhost"
+    set service.Port = 52773
+    set service.Type = "HTTP"
+    set service.HTTPCredentialsConfig = "fhir-superuser"
     do service.%Save()
 
     zn "HSLIB"
