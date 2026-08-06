@@ -5,4 +5,4 @@ iris-embedded-python-wrapper
 # grongier: Provides a python implementation of FHIR-Converter written in C#.
 python-fhir-converter @ https://github.com/grongierisc/fhir-converter/releases/download/v0.6.0/python_fhir_converter-0.6.0-py3-none-any.whl
 # grongier: A flexible Python-based strategy for customizing InterSystems IRIS FHIR Server behavior using decorators.
-iris-fhir-python-strategy @ git+https://github.com/grongierisc/iris-fhir-python-strategy@v0.2.0
+iris-fhir-python-strategy @ https://github.com/charEtoile/iris-fhir-python-strategy/releases/download/v0.2.2/iris_fhir_python_strategy-0.2.2-py3-none-any.whl
