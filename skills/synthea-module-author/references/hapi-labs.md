@@ -144,11 +144,23 @@ code `gim-service`. The extraction script detects it by that system URI.
 Use `-d` to load the modules from `iris-fhir-converter-demo`. Always `rm output/fhir/*.json` first — Synthea appends, not overwrites.
 
 ```bash
-cd /Users/8826/Developer/misc/synthea
+cd ~/Developer/misc/synthea
 rm -f output/fhir/*.json
-./run_synthea -p 1000 -s 42 -a 55-85 --exporter.years_of_history=0 \
-  -d /Users/8826/Developer/misc/iris-fhir-converter-demo/src/DSE/synthea
+./run_synthea -p 1000 -s 42 -a 55-85 --exporter.years_of_history=3 \
+  -d ~/Developer/misc/iris-fhir-converter-demo/src/DSE/synthea
 ```
+
+> [!NOTE]
+> The `-p 1000` flag in Synthea specifies the number of **living** patients to generate, not the total. Synthea simulates full life cycles — with an age range of 55–85, a significant portion of generated patients die during the simulation.
+> Synthea keeps running until it has 1,000 **alive** patients at export time, but all patients (including deceased ones) are written to output files.
+> 
+> So: **1,368 total = ~1,000 living + ~368 deceased**.
+> 
+> The older the age range, the more "extra" patients you get since mortality is higher. If you wanted exactly 1,000 files you'd need to either:
+> - Filter to living patients only (check `Patient.deceasedBoolean` / `Patient.deceasedDateTime`), or
+> - Use a younger age range with lower mortality
+
+
 
 Output: `output/fhir/` — one FHIR Bundle JSON per patient.
 
