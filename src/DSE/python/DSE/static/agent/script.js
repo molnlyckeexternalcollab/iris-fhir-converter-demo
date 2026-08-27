@@ -65,7 +65,13 @@ function AgentRunner({ onBack }) {
     processing.current = true;
     const raw   = eventQueue.current.shift();
     const msg   = JSON.parse(raw.data);
-    const delay = msg.destination === 'LLM' && msg.request ? ANIM.queueDelayLlm : ANIM.queueDelayOther;
+
+    // If the final answer is already waiting in the queue the backend has finished —
+    // drain remaining events immediately instead of running the full animation replay.
+    const finalPending = msg.final || eventQueue.current.some(e => JSON.parse(e.data).final);
+    const delay = finalPending
+      ? 50
+      : (msg.destination === 'LLM' && msg.request ? ANIM.queueDelayLlm : ANIM.queueDelayOther);
 
     if (msg.destination === 'FHIR') {
       setFhirReversed(!msg.request); setFhirActive(true);
