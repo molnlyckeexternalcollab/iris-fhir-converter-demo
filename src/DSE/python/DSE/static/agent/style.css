@@ -1,8 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght,ROND@6..144,87.2,1..1000,69&display=swap');
+
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-Light.woff2') format('woff2'), url('MolnlyckeSans-Light.woff') format('woff');
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-LightItalic.woff2') format('woff2'), url('MolnlyckeSans-LightItalic.woff') format('woff');
+  font-weight: 300; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-Regular.woff2') format('woff2'), url('MolnlyckeSans-Regular.woff') format('woff');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-Italic.woff2') format('woff2'), url('MolnlyckeSans-Italic.woff') format('woff');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-Medium.woff2') format('woff2'), url('MolnlyckeSans-Medium.woff') format('woff');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Molnlycke Sans';
+  src: url('MolnlyckeSans-Bold.woff2') format('woff2'), url('MolnlyckeSans-Bold.woff') format('woff');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
 
 body {
-    font-family: "Google Sans Flex", sans-serif;;
+    font-family: 'Molnlycke Sans', sans-serif;
     margin: 0;
     background-color: #fff;
     background-image: url(background.jpg);
@@ -379,17 +409,17 @@ body.intro-active::before {
     transition: opacity 0.5s ease-out, transform 0.5s ease-out, background-color 0.5s ease;
     transform-origin: top center;
     min-height: fit-content;
-    background-color: rgba(200, 200, 200, 0.3);
+    background-color: #edf7f1;
     text-align: center;
 }
 
-.event-item:nth-child(1) { font-weight: bold; opacity: 1; background-color: skyblue; }
+.event-item:nth-child(1) { font-weight: 500; opacity: 1; background-color: #067a3c; color: white; }
 .event-item:nth-child(n+2) { opacity: 0.9; transform: scale(0.9); }
 .event-item:nth-child(n+5) { opacity: 0.1; transform: scale(0.9); }
 
 .right-panel .answer {
     grid-area: answer;
-    background-color: #ECFAFF;
+    background-color: #f0f2f0;
     padding: 15px;
     border-radius: 8px;
     height: fit-content;

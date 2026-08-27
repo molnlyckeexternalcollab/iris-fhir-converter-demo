@@ -6,7 +6,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 
 // ── Animation configuration ───────────────────────────────────────────────
 // SPEED: 1.0 = original HF Space pace, 0.5 = twice as fast, 0.25 = four times.
-const SPEED = 0.2;
+const SPEED = 1;
 const _ANIM_D = {               // original HF Space default values at SPEED = 1.0
   queueDelayLlm:   6000,        // ms — hold time while LLM processes a request
   queueDelayOther: 3000,        // ms — hold time for FHIR and response events
@@ -232,9 +232,9 @@ function AgentRunner({ onBack }) {
 
             <div className={`vertex ${llmWorking ? 'working' : ''}`}>
               <div className='gcp-resource-frame'>
-                <img src='static/medgemma.avif' alt='MedGemma' />
+                <img src='static/molnlycke-medgemma.svg' alt='MedGemma' />
                 <div>MedGemma 4B</div>
-                <div>(LM Studio)</div>
+                <div>(or Mölnlycke LLM)</div>
               </div>
             </div>
 
@@ -246,7 +246,7 @@ function AgentRunner({ onBack }) {
 
             <div className='fhir'>
               <div className='gcp-resource-frame'>
-                <img src='static/fhir-colors.svg' alt='FHIR' className='fhir-image' />
+                <img src='static/1-intellicare-foundation.svg' alt='FHIR' className='fhir-image' />
                 <div>Electronic Health Record</div>
                 <div>(IRIS FHIR R4)</div>
               </div>
@@ -273,7 +273,7 @@ function Introduction({ onStart }) {
   return (
     <div className='intro-page'>
       <header className='intro-header'>
-        <img src='static/medgemma.avif' className='logo' alt='MedGemma' />
+        <img src='static/molnlycke-medgemma.svg' className='logo' alt='MedGemma' />
       </header>
       <main className='intro-content'>
         <section className='diagram-section'>

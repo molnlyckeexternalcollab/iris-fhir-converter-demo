@@ -7,7 +7,7 @@ function ArrowFlow({direction = 'rtl', reverseFlow = false, speed = 1.0}) {
   const circleRefs = useRef([]);
   circleRefs.current = [];
 
-  const circleRadii = [4, 14, 7, 16, 9];
+  const circleRadii = [5, 6, 8, 10, 13];  // ascending sizes matching Mölnlycke logo proportions
 
   const stemPaths = {
     'rtl': 'M 250,75 L 125,75 A 50 50 0 0 0 75,125 L 75,132',
@@ -112,7 +112,7 @@ function ArrowFlow({direction = 'rtl', reverseFlow = false, speed = 1.0}) {
                 <defs>
                     <filter id='glow' x='-100%' y='-100%' width='300%' height='300%'>
                         <feGaussianBlur in='SourceAlpha' stdDeviation='3' result='blur'/>
-                        <feFlood floodColor='#4285F4' floodOpacity='1' result='color'/>
+                        <feFlood floodColor='#14AF28' floodOpacity='1' result='color'/>
                         <feComposite in='color' in2='blur' operator='in' result='glow'/>
                         <feMerge>
                             <feMergeNode in='glow'/>
@@ -121,11 +121,11 @@ function ArrowFlow({direction = 'rtl', reverseFlow = false, speed = 1.0}) {
                     </filter>
                 </defs>
                 <g id="Page-1" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
-                    <path ref={stemPathRef} id="Path-1" className="path" fill="none" stroke="#484135" strokeWidth="8" strokeLinejoin="round" strokeMiterlimit="10" d={stemPathD} />
+                    <path ref={stemPathRef} id="Path-1" className="path" fill="none" stroke="#b6b4aa" strokeWidth="3" strokeLinejoin="round" strokeMiterlimit="10" d={stemPathD} />
                     <path ref={circlePathRef} id='Path-Circles' stroke='none' d={
     circlePathD} />
                     {[...Array(5)].map((_, i) => (
-                        <circle key={i} ref={addToCircleRefs} r={circleRadii[i]} fill="#4285F4" filter="url(#glow)" />
+                        <circle key={i} ref={addToCircleRefs} r={circleRadii[i]} fill="#14AF28" filter="url(#glow)" />
                     ))
 }
 <polyline ref = {arrowRef} id = 'arrow' points = '0,-9 18,0 0,9 5,0' fill =
