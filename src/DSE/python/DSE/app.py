@@ -1,9 +1,12 @@
 import logging
 import traceback
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from DSE.routers.hapi import router as hapi_router
+from DSE.routers.agent import router as agent_router
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -34,6 +37,10 @@ async def debug_exception_handler(request: Request, exc: Exception):
     return PlainTextResponse(traceback.format_exc(), status_code=500)
 
 app.include_router(hapi_router)
+app.include_router(agent_router)
+
+_AGENT_STATIC = Path(__file__).parent / "static" / "agent"
+app.mount("/agent/static", StaticFiles(directory=_AGENT_STATIC), name="agent_static")
 
 if __name__ == "__main__":
     import uvicorn

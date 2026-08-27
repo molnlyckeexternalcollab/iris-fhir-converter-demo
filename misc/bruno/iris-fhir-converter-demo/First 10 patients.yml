@@ -5,8 +5,11 @@ info:
 
 http:
   method: GET
-  url: "{{http_base_url}}/fhir/r4/Patient?_count=10"
+  url: "{{http_base_url}}/fhir/r4/Patient?_elements=id,name&_count=10"
   params:
+    - name: _elements
+      value: id,name
+      type: query
     - name: _count
       value: "10"
       type: query
