@@ -10,9 +10,42 @@
         "stopOnEntry": false,
         "justMyCode": false,
         "env": {
-            "PYTHONPATH": "${workspaceFolder}/src/CDS/python:${workspaceFolder}/src/EAI/python"
+            "PYTHONPATH": "${workspaceFolder}/src/CDS/python:${workspaceFolder}/src/DSE/python:${workspaceFolder}/src/EAI/python"
         },
         "args": []
+    },
+    {
+        "name": "Local DSE server",
+        "type": "debugpy",
+        "request": "launch",
+        "python": "${command:python.interpreterPath}",
+        "program": "${workspaceFolder}/src/DSE/python/DSE/app.py",
+        "stopOnEntry": false,
+        "justMyCode": false,
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/CDS/python:${workspaceFolder}/src/DSE/python:${workspaceFolder}/src/EAI/python"
+        },
+        "args": []
+    },
+    {
+        "name": "Attach to IRIS container",
+        "type": "debugpy",
+        "request": "attach",
+        // "preLaunchTask": "Start debugpy in IRIS container (iop --migrate)",
+        "connect": {
+            "host": "localhost",
+            "port": 5678
+        },
+        "pathMappings": [
+            {
+                "localRoot": "${workspaceFolder}",
+                "remoteRoot": "/irisdev/app"
+            },
+            {
+                "localRoot": "${userHome}/Developer/misc/interoperability-embedded-python/src",
+                "remoteRoot": "/iop-src/src"
+            }
+        ]
     }
   ]
 }
