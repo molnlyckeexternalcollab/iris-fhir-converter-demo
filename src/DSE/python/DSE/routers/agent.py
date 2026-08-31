@@ -26,7 +26,7 @@ async def get_questions():
 
 @router.get("/run_agent")
 async def run_agent_endpoint(
-    patient_id: str = Query(default="7597"),
+    patient_id: str = Query(default="3887"),
     question_id: Optional[int] = Query(default=None),
     prompt: Optional[str] = Query(default=None),
 ):

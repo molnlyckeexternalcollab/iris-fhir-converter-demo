@@ -9,13 +9,15 @@ function ArrowFlow({direction = 'rtl', reverseFlow = false, speed = 1.0}) {
 
   const circleRadii = [5, 6, 8, 10, 13];  // ascending sizes matching Mölnlycke logo proportions
 
+  const midY = 35;  // vertical centre of the horizontal run; half the SVG/row height (150px)
+
   const stemPaths = {
-    'rtl': 'M 250,75 L 125,75 A 50 50 0 0 0 75,125 L 75,132',
-    'ltr': 'M 0,75 L 125,75 A 50 50 0 0 1 175,125 L 175,132',
+    'rtl': `M 300,${midY} L 125,${midY} A 50 50 0 0 0 75,${midY+50} L 75,${midY+57}`,
+    'ltr': `M 0,${midY} L 175,${midY} A 50 50 0 0 1 225,${midY+50} L 225,${midY+57}`,
   };
   const circlePaths = {
-    'rtl': 'M 300,75 L 125,75 A 50 50 0 0 0 75,125 L 75,182',
-    'ltr': 'M -50,75 L 125,75 A 50 50 0 0 1 175,125 L 175,182',
+    'rtl': `M 350,${midY} L 125,${midY} A 50 50 0 0 0 75,${midY+50} L 75,${midY+107}`,
+    'ltr': `M -50,${midY} L 175,${midY} A 50 50 0 0 1 225,${midY+50} L 225,${midY+107}`,
   };
 
   const stemPathD = stemPaths[direction];
@@ -107,7 +109,7 @@ function ArrowFlow({direction = 'rtl', reverseFlow = false, speed = 1.0}) {
 
     return (
         <div>
-            <svg width='250px' height='150px' viewBox='0 0 250 150' version='1.1' style={{
+            <svg width='300px' height='150px' viewBox='0 0 300 150' version='1.1' style={{
     overflow: 'visible' }}>
                 <defs>
                     <filter id='glow' x='-100%' y='-100%' width='300%' height='300%'>

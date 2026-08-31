@@ -35,7 +35,7 @@ body {
     font-family: 'Molnlycke Sans', sans-serif;
     margin: 0;
     background-color: #fff;
-    background-image: url(background.jpg);
+    background-image: url(background-green.png);
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
@@ -333,7 +333,7 @@ body.intro-active::before {
     width: 100%;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: 1fr 150px 100px 150px 100px 150px 1fr;
+    grid-template-columns: 1fr 200px 100px 150px 100px 200px 1fr;
     grid-template-rows: 20px 150px 250px 1fr;
     grid-template-areas:
         " . . . agent-header . . ."
@@ -368,6 +368,10 @@ body.intro-active::before {
     text-align: center;
 }
 
+.fhir.active .gcp-resource-frame {
+    animation: fhir-shadow-wobble var(--anim-glow-cycle, 2s) infinite ease-in-out;
+}
+
 .vertex.working .gcp-resource-frame {
     animation: shadow-wobble var(--anim-glow-cycle, 2s) infinite ease-in-out var(--anim-glow-delay, 0s);
 }
@@ -385,7 +389,7 @@ body.intro-active::before {
 }
 
 .right-panel .gcp-resource-frame img {
-    max-width: 100%;
+    width: 100%;
     height: auto;
 }
 
@@ -452,6 +456,15 @@ body.intro-active::before {
         opacity: 1;
         padding-top: 5px;
         padding-bottom: 5px;
+    }
+}
+
+@keyframes fhir-shadow-wobble {
+    0%, 100% {
+        box-shadow: 0 0 8px 4px rgba(140, 107, 198, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 16px 8px rgba(140, 107, 198, 0.8);
     }
 }
 
