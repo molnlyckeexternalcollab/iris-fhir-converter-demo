@@ -457,10 +457,10 @@ body.intro-active::before {
 
 @keyframes shadow-wobble {
     0%, 100% {
-        box-shadow: 0 0 8px 4px rgba(66, 133, 244, 0.5);
+        box-shadow: 0 0 8px 4px rgba(6, 122, 60, 0.5);
     }
     50% {
-        box-shadow: 0 0 16px 8px rgba(66, 133, 244, 0.8);
+        box-shadow: 0 0 16px 8px rgba(6, 122, 60, 0.8);
     }
 }
 
