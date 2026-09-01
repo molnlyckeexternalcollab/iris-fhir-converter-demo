@@ -12,16 +12,19 @@ from typing import Annotated, Callable, Optional
 from urllib.parse import quote
 
 import requests
+
+# LangChain imports
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
-from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolNode
-from typing_extensions import TypedDict
+from langchain_core.tools import tool        # @tool decorator
+from langchain_openai import ChatOpenAI      # the LLM client
+
+# LangGraph imports
+from langgraph.graph import END, StateGraph  # the pipeline wiring
+from langgraph.prebuilt import ToolNode      # executes tools
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-FHIR_STORE_URL = os.getenv("FHIR_STORE_URL", "http://localhost:52773/fhir/r4")
+FHIR_STORE_URL = os.getenv("FHIR_STORE_URL", "http://4.210.90.115:8081/fhir/r4")
 FHIR_USER = os.getenv("FHIR_USER", "SuperUser")
 FHIR_PASSWORD = os.getenv("FHIR_PASSWORD", "SYS")
 LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
