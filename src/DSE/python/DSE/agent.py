@@ -17,7 +17,7 @@ import requests
 # LangChain imports
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool        # @tool decorator
-from langchain_openai import ChatOpenAI      # the LLM client
+from openai import OpenAI                    # direct client avoids LangChain tool-call routing on 27b responses
 
 # LangGraph imports
 from langgraph.graph import END, StateGraph  # the pipeline wiring
@@ -29,7 +29,8 @@ FHIR_STORE_URL = os.getenv("FHIR_STORE_URL", "http://4.210.90.115:8081/fhir/r4")
 FHIR_USER = os.getenv("FHIR_USER", "SuperUser")
 FHIR_PASSWORD = os.getenv("FHIR_PASSWORD", "SYS")
 LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
-LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "medgemma-4b-it-mlx")
+LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "medgemma-27b-text-it-mlx")
+LLM_CONTEXT_TOKENS = int(os.getenv("LLM_CONTEXT_TOKENS", "131072"))  # max tokens your model supports
 
 FHIR_RESOURCE_TYPES = [
     "Encounter", "Practitioner",
@@ -46,25 +47,25 @@ QUESTIONS = [
     {"id": 5, "question": "Summarise this patient's active medical conditions."},
 ]
 
+# tokens reserved for the question, prompt template, and answer — not available for FHIR data
+_PROMPT_RESERVED_TOKENS = 4_000
+
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
 class _StringLLM:
-    """Wraps ChatOpenAI to return a plain string."""
+    """Calls the LLM directly, bypassing LangChain response routing."""
 
     def __init__(self):
-        self._chat = ChatOpenAI(
-            base_url=LM_STUDIO_BASE_URL,
-            api_key="lm-studio",
-            model=LM_STUDIO_MODEL,
-        )
+        self._client = OpenAI(base_url=LM_STUDIO_BASE_URL, api_key="lm-studio")
 
     def invoke(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.1) -> str:
-        return (
-            self._chat
-            .bind(temperature=temperature, max_tokens=max_tokens)
-            .invoke([HumanMessage(content=prompt)])
-            .content
+        response = self._client.chat.completions.create(
+            model=LM_STUDIO_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=temperature,
         )
+        return response.choices[0].message.content or ""
 
 
 _llm: Optional[_StringLLM] = None
@@ -186,7 +187,6 @@ def _build_agent(emit: Callable[[dict], None]):
         return json.dumps(result)
 
     manifest_tool_node = ToolNode([get_patient_data_manifest])
-    retrieval_tool_node = ToolNode([get_patient_fhir_resource])
 
     # ── Nodes ─────────────────────────────────────────────────────────────────
 
@@ -263,33 +263,64 @@ def _build_agent(emit: Callable[[dict], None]):
         facts = []
         manifest = state.get("patient_fhir_manifest", {})
         relevant = state.get("relevant_resource_types", [])
+        question = state["messages"][1].content
+
         # Patient demographics are already in the manifest — no FHIR call needed
         if "Patient" in relevant and "Patient" in manifest:
             pt = manifest["Patient"]
             facts.append(f"Patient demographics: gender={pt.get('gender')}, birthDate={pt.get('birthDate')}, name={pt.get('name')}")
             emit({"destination": "FHIR", "request": False, "event": "Patient demographics from manifest", "data": None, "final": False})
-        for call in state.get("tool_calls_to_execute", []):
+
+        calls = state.get("tool_calls_to_execute", [])
+        if not calls:
+            return {"tool_output_summary": facts}
+
+        def _fetch(call):
             rt = call.get("id", "resource")
-            emit({"destination": "FHIR", "request": True,  "event": f"Fetching {rt}…",     "data": None, "final": False})
-            outputs = retrieval_tool_node.invoke([AIMessage(content="", tool_calls=[call])])
-            raw_output = outputs[0].content if outputs else "{}"
-            emit({"destination": "FHIR", "request": False, "event": f"{rt} received",       "data": None, "final": False})
-            emit({"destination": "LLM",  "request": True,  "event": f"Extracting facts from {rt}…", "data": None, "final": False})
+            emit({"destination": "FHIR", "request": True, "event": f"Fetching {rt}…", "data": None, "final": False})
+            raw = get_patient_fhir_resource.invoke(call["args"])
+            emit({"destination": "FHIR", "request": False, "event": f"{rt} received", "data": None, "final": False})
+            return rt, raw
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(calls)) as pool:
+            fetched = dict(pool.map(_fetch, calls))
+
+        data_budget_chars = (LLM_CONTEXT_TOKENS - _PROMPT_RESERVED_TOKENS) * 4
+        total_chars = sum(len(raw) for raw in fetched.values())
+
+        if total_chars <= data_budget_chars:
+            emit({"destination": None, "request": False, "event": f"Data fits in context ({total_chars // 1024} KB) — no summarization needed", "data": None, "final": False})
+            for rt, raw in fetched.items():
+                facts.append(f"=== {rt} ===\n{raw}")
+            return {"tool_output_summary": facts}
+
+        # Summarize the largest resources first until the total fits in the context budget
+        emit({"destination": None, "request": False, "event": f"Data too large ({total_chars // 1024} KB) — summarizing largest resources", "data": None, "final": False})
+        result = dict(fetched)
+        for rt in sorted(fetched, key=lambda r: len(fetched[r]), reverse=True):
+            if total_chars <= data_budget_chars:
+                break
+            raw = result[rt]
+            emit({"destination": "LLM", "request": True, "event": f"Summarizing {rt} ({len(raw) // 1024} KB)…", "data": None, "final": False})
             summary_prompt = (
-                f"USER QUESTION: {state['messages'][1].content}\n\n"
-                f"TOOL OUTPUT:\n{raw_output}\n\n"
+                f"USER QUESTION: {question}\n\n"
+                f"FHIR DATA ({rt}):\n{raw}\n\n"
                 "Summarise only facts relevant to the question. Be concise. No JSON."
             )
             summary = _strip_thinking(llm.invoke(summary_prompt, max_tokens=2000, temperature=0.6))
-            facts.append(summary)
-            emit({"destination": "LLM",  "request": False, "event": f"Facts extracted from {rt}", "data": None, "final": False})
+            total_chars -= len(raw) - len(summary)
+            result[rt] = summary
+            emit({"destination": "LLM", "request": False, "event": f"{rt} summarized", "data": None, "final": False})
+
+        for rt in fetched:  # preserve original resource type order
+            facts.append(f"=== {rt} ===\n{result[rt]}")
         return {"tool_output_summary": facts}
 
     def get_final_answer(state: AgentState) -> dict:
         emit({"destination": "LLM", "request": True, "event": "Synthesising final answer…", "data": None, "final": False})
         prompt = (
             f"USER QUESTION: {state['messages'][1].content}\n\n"
-            f"SUMMARISED INFORMATION:\n{chr(10).join(state['tool_output_summary'])}\n\n"
+            f"PATIENT DATA:\n{chr(10).join(state['tool_output_summary'])}\n\n"
             "Provide a comprehensive answer in markdown:"
         )
         answer = _strip_thinking(llm.invoke(prompt, max_tokens=2000, temperature=0.1))
