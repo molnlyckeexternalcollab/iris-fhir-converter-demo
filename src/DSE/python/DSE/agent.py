@@ -4,11 +4,12 @@ Adapted from notebooks/ehr_navigator_agent_no_google.ipynb.
 LLM: local MedGemma via LM Studio (OpenAI-compatible endpoint).
 """
 
+import concurrent.futures
 import json
 import operator
 import os
 import re
-from typing import Annotated, Callable, Optional
+from typing import Annotated, Callable, Optional, TypedDict
 from urllib.parse import quote
 
 import requests
@@ -147,19 +148,27 @@ def _build_agent(emit: Callable[[dict], None]):
     def get_patient_data_manifest(patient_id: str) -> str:
         """Discovers all available FHIR resource types for a patient."""
         manifest = {}
-        for rt in FHIR_RESOURCE_TYPES:
-            emit({"destination": "FHIR", "request": True,  "event": f"Discovering {rt}…", "data": None, "final": False})
+
+        def _scan(rt):
+            emit({"destination": "FHIR", "request": True, "event": f"Discovering {rt}…", "data": None, "final": False})
             result = _get_fhir(f"{rt}?patient=Patient/{patient_id}")
             if result.get("total", 0) > 0:
-                manifest[rt] = []
+                codes = []
                 for entry in result.get("entry", []):
                     resource = entry.get("resource", {})
                     if "code" in resource and "coding" in resource["code"]:
                         for code in resource["code"]["coding"]:
-                            manifest[rt].append(f'{code.get("display", "")}={code.get("code", "")}')
+                            codes.append(f'{code.get("display", "")}={code.get("code", "")}')
                 emit({"destination": "FHIR", "request": False, "event": f"{rt}: {result['total']} records", "data": None, "final": False})
-            else:
-                emit({"destination": "FHIR", "request": False, "event": f"{rt}: none", "data": None, "final": False})
+                return rt, codes
+            emit({"destination": "FHIR", "request": False, "event": f"{rt}: none", "data": None, "final": False})
+            return rt, None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(FHIR_RESOURCE_TYPES)) as pool:
+            for rt, codes in pool.map(_scan, FHIR_RESOURCE_TYPES):
+                if codes is not None:
+                    manifest[rt] = codes
+
         return json.dumps(manifest)
 
     @tool
