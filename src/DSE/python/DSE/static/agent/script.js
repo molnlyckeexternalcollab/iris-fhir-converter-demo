@@ -303,7 +303,7 @@ function AgentRunner({ onBack }) {
               {fhirActive && <ArrowFlow direction='ltr' reverseFlow={fhirReversed} speed={ANIM.gsapSpeed} />}
             </div>
 
-            <div className={`vertex ${llmWorking ? 'working' : ''}`}>
+            <div id='llm' className={`vertex ${llmWorking ? 'working' : ''}`}>
               <div className='gcp-resource-frame'>
                 <img src='static/Molnlycke-logo-individual-circles.svg' alt='Molnycke-logo' />
                 <div>LLM</div>
@@ -311,13 +311,13 @@ function AgentRunner({ onBack }) {
               </div>
             </div>
 
-            <div className='event-log'>
+            <div id='event-log' className='event-log'>
               {output.map(e => (
                 <div key={e.id} className='event-item'>{e.text}</div>
               ))}
             </div>
 
-            <div className={`fhir ${fhirActive ? 'active' : ''}`}>
+            <div id='fhir-server' className={`fhir ${fhirActive ? 'active' : ''}`}>
               <div className='gcp-resource-frame'>
                 <img src='static/1-intellicare-foundation.svg' alt='FHIR' className='fhir-image' />
                 <div>Electronic Health Record</div>
@@ -326,10 +326,10 @@ function AgentRunner({ onBack }) {
             </div>
 
             {isRunning && intermediate && (
-              <div className='answer'><Markdown content={intermediate} /></div>
+              <div id='answer' className='answer'><Markdown content={intermediate} /></div>
             )}
             {answer && (
-              <div className='answer'>
+              <div id='answer' className='answer'>
                 <em>{questionLabel}</em><br /><br />
                 <strong>Answer: </strong><Markdown content={answer} />
               </div>
