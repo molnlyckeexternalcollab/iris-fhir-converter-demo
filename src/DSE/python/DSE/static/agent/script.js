@@ -68,7 +68,7 @@ function AgentLogo({ isRunning, className }) {
   }, [isRunning]);
 
   return (
-    <svg ref={svgRef} className={className} viewBox='0 0 27.322496 24.474658' fill='none'
+    <svg ref={svgRef} id='agent-logo' className={className} viewBox='0 0 27.322496 24.474658' fill='none'
          xmlns='http://www.w3.org/2000/svg' style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
       <path id='e' fillRule='evenodd' clipRule='evenodd' fill='#14af28'
         d='m 1.8291521,19.017597 c 0.0167,-0.55233 0.0514,-0.81985 0.2276,-1.22964 0.2816,-0.67756 0.9348,-1.14195 1.7832,-1.14343 0.8483,-0.0015 1.4854,0.46068 1.7693,1.13701 0.1774,0.409301 0.2307,0.68373 0.2495,1.23606 z m 2.0081,-3.88726 c -2.3223,0.0042 -3.838,1.71724 -3.833,4.67029 0.0058,3.47502 1.8123,4.67822 4.0808,4.67402 1.2395,-0.0022 2.0441,-0.3001 2.778,-0.8754 0.0422,-0.0331 0.0462,-0.0979 0.0076,-0.135599 0,0 -0.8336,-0.8191 -1.0305,-1.0098 -0.0285,-0.0275 -0.0704,-0.0294 -0.1028,-0.0072 -0.4387,0.3023 -0.9127,0.4422 -1.6192,0.4434 -1.4828,0.0027 -2.3059,-0.9861 -2.3085,-2.552661 h 5.7923 c 0.0469,0 0.0845,-0.03927 0.0845,-0.08794 l -0.0012,-0.732641 c -0.0043,-2.592659 -1.4185,-4.39092 -3.848,-4.386469 z' />
@@ -118,19 +118,48 @@ function AgentRunner({ onBack }) {
   // Custom additions
   const [patientId, setPatientId]               = useState('3887');
   const [customPrompt, setCustomPrompt]         = useState('');
+  const [, setTick]                             = useState(0); // drives elapsed-timer re-renders
+  const [agentLogoPulse, setAgentLogoPulse]     = useState(false);
 
   useEffect(() => {
     fetch('questions').then(r => r.json()).then(setQuestions);
   }, []);
+
+  // Tick every 200ms while any FHIR task is still running so elapsed times update live
+  useEffect(() => {
+    const hasRunning = output.some(e => e.type === 'tracked' && e.status === 'running');
+    if (!hasRunning) return;
+    const id = setInterval(() => setTick(t => t + 1), 200);
+    return () => clearInterval(id);
+  }, [output]);
 
   const eventQueue    = useRef([]);
   const processing    = useRef(false);
   const esRef         = useRef(null);
   const timerRef      = useRef(null);
   const eventCounter  = useRef(0);
+  const logoPulseTimer = useRef(null);
 
   const pushEvent = text => {
-    setOutput(prev => [{ id: eventCounter.current++, text }, ...prev]);
+    setOutput(prev => [{ id: eventCounter.current++, type: 'plain', text }, ...prev]);
+  };
+
+  const pushTrackedStart = (task_id, label, kind = 'fhir') => {
+    setOutput(prev => [{ id: eventCounter.current++, type: 'tracked', task_id, label, kind, startTime: Date.now(), status: 'running' }, ...prev]);
+  };
+
+  const updateTrackedDone = (task_id) => {
+    setOutput(prev => prev.map(e =>
+      e.type === 'tracked' && e.task_id === task_id && e.status === 'running'
+        ? { ...e, status: 'done', elapsed: Date.now() - e.startTime }
+        : e
+    ));
+  };
+
+  const triggerLogoPulse = () => {
+    clearTimeout(logoPulseTimer.current);
+    setAgentLogoPulse(true);
+    logoPulseTimer.current = setTimeout(() => setAgentLogoPulse(false), 800);
   };
 
   const processQueue = useCallback(() => {
@@ -138,13 +167,16 @@ function AgentRunner({ onBack }) {
     processing.current = true;
     const raw   = eventQueue.current.shift();
     const msg   = JSON.parse(raw.data);
+    console.log('[SSE]', msg);
 
     // If the final answer is already waiting in the queue the backend has finished —
     // drain remaining events immediately instead of running the full animation replay.
     const finalPending = msg.final || eventQueue.current.some(e => JSON.parse(e.data).final);
     const delay = finalPending
       ? 50
-      : (msg.destination === 'LLM' && msg.request ? ANIM.queueDelayLlm : ANIM.queueDelayOther);
+      : msg.destination === 'LLM' && msg.request
+        ? ANIM.queueDelayLlm
+        : 50;
 
     if (msg.destination === 'FHIR') {
       setFhirReversed(!msg.request); setFhirActive(true);
@@ -152,12 +184,18 @@ function AgentRunner({ onBack }) {
     } else if (msg.destination === 'LLM') {
       setLlmReversed(!msg.request); setLlmActive(true);
       setFhirActive(false); setLlmWorking(msg.request);
+      triggerLogoPulse();
     } else {
       setFhirActive(false); setLlmActive(false); setLlmWorking(false);
     }
 
     if (msg.final) {
       pushEvent(msg.event);
+      setOutput(prev => prev.map(e =>
+        e.type === 'tracked' && e.status === 'running'
+          ? { ...e, status: 'done', elapsed: Date.now() - e.startTime }
+          : e
+      ));
       setAnswer(msg.data || '');
       setIntermediate('');
       esRef.current.close();
@@ -170,7 +208,16 @@ function AgentRunner({ onBack }) {
       return;
     }
 
-    if (msg.data && typeof msg.data !== 'string') {
+    if (msg.task_id) {
+      if (msg.status === 'running') pushTrackedStart(msg.task_id, msg.event);
+      else updateTrackedDone(msg.task_id);
+    } else if (msg.destination === 'LLM' && msg.request) {
+      pushTrackedStart('llm', msg.event, 'llm');
+    } else if (msg.destination === 'LLM' && !msg.request) {
+      updateTrackedDone('llm');
+      const suffix = msg.data && typeof msg.data === 'string' && msg.data.length < 30 ? `: ${msg.data}` : '';
+      pushEvent(`${msg.event}${suffix}`);
+    } else if (msg.data && typeof msg.data !== 'string') {
       setIntermediate('```json\n' + JSON.stringify(msg.data, null, 2) + '\n```');
       pushEvent(`${msg.event}: structured data received`);
     } else {
@@ -266,27 +313,7 @@ function AgentRunner({ onBack }) {
               ))}
             </div>
 
-            <h5 style={{ marginTop: '20px' }}>Or ask a custom question</h5>
-            <textarea
-              placeholder='Type your clinical question…'
-              value={customPrompt}
-              onChange={e => setCustomPrompt(e.target.value)}
-              disabled={isRunning}
-              style={{ width: '100%', minHeight: '72px', padding: '8px 10px', borderRadius: '8px',
-                       border: '1px solid #dadce0', fontSize: '0.85em', resize: 'vertical',
-                       boxSizing: 'border-box', fontFamily: 'inherit', marginTop: '8px' }}
-            />
-            <button
-              className={`task-button ${typeof selectedId === 'string' && isRunning ? 'running' : ''}`}
-              style={{ marginTop: '8px', width: '100%', textAlign: 'center',
-                       ...(customPrompt.trim() && !isRunning
-                         ? { background: '#202124', color: 'white', borderColor: '#202124' }
-                         : {}) }}
-              onClick={() => startRun(null, customPrompt)}
-              disabled={isRunning || !customPrompt.trim()}
-            >
-              Submit
-            </button>
+
           </div>
 
           {/* ── Right panel ── */}
@@ -297,7 +324,7 @@ function AgentRunner({ onBack }) {
               {llmActive && <ArrowFlow reverseFlow={llmReversed} speed={ANIM.gsapSpeed} />}
             </div>
 
-            <AgentLogo isRunning={isRunning && !llmWorking} className='agent agent-image' />
+            <AgentLogo isRunning={agentLogoPulse || output.some(e => e.type === 'tracked' && e.task_id && e.task_id.startsWith('fhir-') && e.status === 'running')} className='agent agent-image' />
 
             <div className='agent-fhir-arrow'>
               {fhirActive && <ArrowFlow direction='ltr' reverseFlow={fhirReversed} speed={ANIM.gsapSpeed} />}
@@ -312,9 +339,20 @@ function AgentRunner({ onBack }) {
             </div>
 
             <div id='event-log' className='event-log'>
-              {output.map(e => (
-                <div key={e.id} className='event-item'>{e.text}</div>
-              ))}
+              {output.map(e => {
+                if (e.type === 'tracked') {
+                  const secs = e.status === 'running'
+                    ? ((Date.now() - e.startTime) / 1000).toFixed(1)
+                    : (e.elapsed / 1000).toFixed(1);
+                  return (
+                    <div key={e.id} className={`event-item tracked ${e.status} ${e.kind || 'fhir'}`}>
+                      <span className='tracked-label'>{e.label}</span>
+                      <span className='tracked-timer'>{secs}s</span>
+                    </div>
+                  );
+                }
+                return <div key={e.id} className='event-item'>{e.text}</div>;
+              })}
             </div>
 
             <div id='fhir-server' className={`fhir ${fhirActive ? 'active' : ''}`}>
@@ -334,6 +372,25 @@ function AgentRunner({ onBack }) {
                 <strong>Answer: </strong><Markdown content={answer} />
               </div>
             )}
+
+            <div className='question-input'>
+              <textarea
+                placeholder='Type your clinical question…'
+                value={customPrompt}
+                onChange={e => setCustomPrompt(e.target.value)}
+                disabled={isRunning}
+              />
+              <button
+                className={`task-button ${typeof selectedId === 'string' && isRunning ? 'running' : ''}`}
+                style={customPrompt.trim() && !isRunning
+                  ? { background: '#202124', color: 'white', borderColor: '#202124' }
+                  : {}}
+                onClick={() => startRun(null, customPrompt)}
+                disabled={isRunning || !customPrompt.trim()}
+              >
+                Submit
+              </button>
+            </div>
           </div>
 
         </div>

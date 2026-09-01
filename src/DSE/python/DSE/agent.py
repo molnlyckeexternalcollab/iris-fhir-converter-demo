@@ -151,7 +151,8 @@ def _build_agent(emit: Callable[[dict], None]):
         manifest = {}
 
         def _scan(rt):
-            emit({"destination": "FHIR", "request": True, "event": f"Discovering {rt}…", "data": None, "final": False})
+            task_id = f"fhir-discover-{rt}"
+            emit({"destination": "FHIR", "request": True, "event": f"Discovering {rt}\u2026", "task_id": task_id, "status": "running", "data": None, "final": False})
             result = _get_fhir(f"{rt}?patient=Patient/{patient_id}")
             if result.get("total", 0) > 0:
                 codes = []
@@ -160,9 +161,9 @@ def _build_agent(emit: Callable[[dict], None]):
                     if "code" in resource and "coding" in resource["code"]:
                         for code in resource["code"]["coding"]:
                             codes.append(f'{code.get("display", "")}={code.get("code", "")}')
-                emit({"destination": "FHIR", "request": False, "event": f"{rt}: {result['total']} records", "data": None, "final": False})
+                emit({"destination": "FHIR", "request": False, "event": f"{rt}: {result['total']} records", "task_id": task_id, "status": "done", "data": None, "final": False})
                 return rt, codes
-            emit({"destination": "FHIR", "request": False, "event": f"{rt}: none", "data": None, "final": False})
+            emit({"destination": "FHIR", "request": False, "event": f"{rt}: none", "task_id": task_id, "status": "done", "data": None, "final": False})
             return rt, None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(FHIR_RESOURCE_TYPES)) as pool:
@@ -202,7 +203,7 @@ def _build_agent(emit: Callable[[dict], None]):
             output = manifest_tool_node.invoke([msg])[0]
             manifest = json.loads(output.content)
             # Always fetch Patient demographics — a direct read returns the resource, not a Bundle
-            emit({"destination": "FHIR", "request": True, "event": "Fetching Patient demographics\u2026", "data": None, "final": False})
+            emit({"destination": "FHIR", "request": True, "event": "Fetching Patient demographics\u2026", "task_id": "fhir-patient-demographics", "status": "running", "data": None, "final": False})
             pt_resp = requests.get(f"{FHIR_STORE_URL}/Patient/{patient_id}",
                                    auth=(FHIR_USER, FHIR_PASSWORD), timeout=30)
             pt_resp.raise_for_status()
@@ -214,7 +215,7 @@ def _build_agent(emit: Callable[[dict], None]):
                     "name":      next((f"{n.get('family','')} {' '.join(n.get('given',[]))}"
                                        for n in pt.get("name", []) if n.get("use") == "official"), "unknown"),
                 }
-            emit({"destination": "FHIR", "request": False, "event": "Patient demographics loaded", "data": None, "final": False})
+            emit({"destination": "FHIR", "request": False, "event": "Patient demographics loaded", "task_id": "fhir-patient-demographics", "status": "done", "data": None, "final": False})
             return {"patient_fhir_manifest": manifest}
         except Exception as exc:
             emit({"destination": None, "request": False, "event": f"Manifest error: {exc}", "data": None, "final": False})
@@ -277,9 +278,10 @@ def _build_agent(emit: Callable[[dict], None]):
 
         def _fetch(call):
             rt = call.get("id", "resource")
-            emit({"destination": "FHIR", "request": True, "event": f"Fetching {rt}…", "data": None, "final": False})
+            task_id = f"fhir-{rt}"
+            emit({"destination": "FHIR", "request": True, "event": f"Fetching {rt}\u2026", "task_id": task_id, "status": "running", "data": None, "final": False})
             raw = get_patient_fhir_resource.invoke(call["args"])
-            emit({"destination": "FHIR", "request": False, "event": f"{rt} received", "data": None, "final": False})
+            emit({"destination": "FHIR", "request": False, "event": f"{rt} received", "task_id": task_id, "status": "done", "data": None, "final": False})
             return rt, raw
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(calls)) as pool:
