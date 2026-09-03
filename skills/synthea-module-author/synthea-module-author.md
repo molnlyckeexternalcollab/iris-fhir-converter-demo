@@ -457,7 +457,7 @@ cd synthea && ./gradlew build -x test
 ./run_synthea -m <module_name> -p 1 -s 42 -a 30-60
 
 # Check output
-jq '.entry[].resource.resourceType' output/fhir/*.json | sort | uniq -c | sort -rn
+jq '.entry[].resource.resourceType' output/fhir/raw/*.json | sort | uniq -c | sort -rn
 ```
 
 If the build fails, read the error — it usually points to the exact JSON issue (missing required field, invalid state type, bad transition target).
@@ -468,16 +468,16 @@ Verify the module produced the expected resources:
 
 ```bash
 # Check conditions
-jq -r '.entry[].resource | select(.resourceType=="Condition") | .code.coding[0].display' output/fhir/*.json
+jq -r '.entry[].resource | select(.resourceType=="Condition") | .code.coding[0].display' output/fhir/raw/*.json
 
 # Check observations/labs
-jq -r '.entry[].resource | select(.resourceType=="Observation") | .code.coding[0].display' output/fhir/*.json
+jq -r '.entry[].resource | select(.resourceType=="Observation") | .code.coding[0].display' output/fhir/raw/*.json
 
 # Check medications
-jq -r '.entry[].resource | select(.resourceType=="MedicationRequest") | .medicationCodeableConcept.coding[0].display' output/fhir/*.json
+jq -r '.entry[].resource | select(.resourceType=="MedicationRequest") | .medicationCodeableConcept.coding[0].display' output/fhir/raw/*.json
 
 # Check procedures
-jq -r '.entry[].resource | select(.resourceType=="Procedure") | .code.coding[0].display' output/fhir/*.json
+jq -r '.entry[].resource | select(.resourceType=="Procedure") | .code.coding[0].display' output/fhir/raw/*.json
 ```
 
 ### Step 4b: Augmentation module skeleton
