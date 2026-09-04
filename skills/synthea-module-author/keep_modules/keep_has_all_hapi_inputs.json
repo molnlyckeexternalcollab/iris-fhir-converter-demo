@@ -1,0 +1,89 @@
+{
+  "name": "Keep Has All HAPI Inputs",
+  "remarks": [
+    "Keep module for the Synthea -k flag. NOT a regular module — do not load it via -d.",
+    "Third step of an incremental keep module (see keep_has_labs.json for the prior step).",
+    "Requires all three groups below to be present:",
+    "",
+    "1. Labs (strict AND — all four required, matches keep_has_labs.json):",
+    "   albumin (LOINC 1751-7), BUN (LOINC 3094-0), chloride (LOINC 2075-0), RDW-CV (LOINC 788-0).",
+    "",
+    "2. Nursing assessments (soft OR — at least one of six, since hapi_braden_assessments.json",
+    "   only fires for patients with a qualifying acute-care/risk condition, unlike the labs):",
+    "   braden_mobility (LOINC 38224-2), braden_moisture (LOINC 38229-1), braden_activity (LOINC 38223-4),",
+    "   braden_friction (LOINC 38226-7), braden_sensory (LOINC 38222-6), gait_transfer (LOINC 93015-6).",
+    "",
+    "3. Device/condition/medication resources (soft OR — at least one of eleven; requiring ALL would be",
+    "   impossible, since e.g. ECMO needs septic shock while ostomy is an unrelated 5% random event):",
+    "   has_edema (SNOMED 79654002), has_spinal_cord_injury (SNOMED 90584004 or built-in 1734006),",
+    "   is_icu_admitted (SNOMED 309904001), is_on_gim_service (local code gim-service),",
+    "   is_on_vasopressin (RxNorm 11149), is_on_cardio_sympathomimetic (RxNorm 3628/7512/3992/8163),",
+    "   has_central_line/has_chest_tube/is_on_ecmo/has_ostomy/has_tracheostomy (Procedure, detected via",
+    "   assign_to_attribute on those states — Synthea has no 'Active Procedure' logic condition and",
+    "   PriorState only sees the calling module's own history, so Procedures from other modules are",
+    "   only detectable this way).",
+    "",
+    "Set --exporter.years_of_history >= (max_age - min_age) — Observation entries (labs, Braden/gait,",
+    "gim-service) have no 'still active' export exemption, unlike Condition/Medication entries.",
+    "All codes validated against tx.fhir.org on 2026-09-04."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "And",
+                "conditions": [
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "1751-7", "display": "Albumin [Mass/volume] in Serum or Plasma" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "3094-0", "display": "Urea nitrogen [Mass/volume] in Serum or Plasma" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "2075-0", "display": "Chloride [Moles/volume] in Serum or Plasma" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "788-0", "display": "Erythrocyte [DistWidth] in Blood by Automated count" }], "operator": "is not nil" }
+                ]
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }], "operator": "is not nil" },
+                  { "condition_type": "Observation", "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }], "operator": "is not nil" }
+                ]
+              },
+              {
+                "condition_type": "Or",
+                "conditions": [
+                  { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "79654002", "display": "Edema" }] },
+                  { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "90584004", "display": "Spinal cord injury" }] },
+                  { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "1734006", "display": "Fracture of vertebral column with spinal cord injury" }] },
+                  { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "309904001", "display": "Intensive care unit" }] },
+                  { "condition_type": "Observation", "codes": [{ "system": "http://hapi-dse.local/CodeSystem", "code": "gim-service", "display": "Patient on General Internal Medicine service" }], "operator": "is not nil" },
+                  { "condition_type": "Active Medication", "codes": [{ "system": "RxNorm", "code": "11149", "display": "vasopressin" }] },
+                  { "condition_type": "Active Medication", "codes": [{ "system": "RxNorm", "code": "3628", "display": "dopamine" }] },
+                  { "condition_type": "Active Medication", "codes": [{ "system": "RxNorm", "code": "7512", "display": "norepinephrine" }] },
+                  { "condition_type": "Active Medication", "codes": [{ "system": "RxNorm", "code": "3992", "display": "epinephrine" }] },
+                  { "condition_type": "Active Medication", "codes": [{ "system": "RxNorm", "code": "8163", "display": "phenylephrine" }] },
+                  { "condition_type": "Attribute", "attribute": "hapi_central_line", "operator": "is not nil" },
+                  { "condition_type": "Attribute", "attribute": "hapi_chest_tube", "operator": "is not nil" },
+                  { "condition_type": "Attribute", "attribute": "hapi_ecmo", "operator": "is not nil" },
+                  { "condition_type": "Attribute", "attribute": "hapi_ostomy", "operator": "is not nil" },
+                  { "condition_type": "Attribute", "attribute": "hapi_tracheostomy", "operator": "is not nil" }
+                ]
+              }
+            ]
+          },
+          "transition": "Keep"
+        },
+        { "transition": "Terminal" }
+      ]
+    },
+    "Keep": { "type": "Terminal" },
+    "Terminal": { "type": "Terminal" }
+  },
+  "gmf_version": 2
+}

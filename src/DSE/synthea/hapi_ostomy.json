@@ -4,6 +4,7 @@
     "Augmentation module: adds a permanent colostomy procedure to 5% of patients aged ≥55.",
     "Uses Age Guard then probability branch — no reliable IBD/colorectal trigger from stock Synthea modules.",
     "Sets has_ostomy=True in HAPI DSE extraction.",
+    "assign_to_attribute: hapi_ostomy lets keep modules check for this Procedure via the Attribute condition type.",
     "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
     "  SNOMED 4044002: Permanent colostomy",
     "  SNOMED 32485007: Hospital admission"
@@ -44,6 +45,7 @@
         { "system": "SNOMED-CT", "code": "4044002", "display": "Permanent colostomy" }
       ],
       "duration": { "low": 120, "high": 180, "unit": "minutes" },
+      "assign_to_attribute": "hapi_ostomy",
       "direct_transition": "Encounter_End"
     },
     "Encounter_End": {

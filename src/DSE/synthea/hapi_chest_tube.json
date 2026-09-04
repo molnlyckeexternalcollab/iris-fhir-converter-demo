@@ -4,6 +4,7 @@
     "Augmentation module: adds an open pleural drainage (chest tube) procedure for sepsis/septic shock patients.",
     "Guards on Or[Sepsis 91302008, Septic shock 76571007] — fires when Synthea generates these conditions.",
     "Sets has_chest_tube=True in HAPI DSE extraction.",
+    "assign_to_attribute: hapi_chest_tube lets keep modules check for this Procedure via the Attribute condition type.",
     "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code"
   ],
   "states": {
@@ -42,6 +43,7 @@
         { "system": "SNOMED-CT", "code": "177788009", "display": "Open drainage of pleural cavity" }
       ],
       "duration": { "low": 30, "high": 60, "unit": "minutes" },
+      "assign_to_attribute": "hapi_chest_tube",
       "direct_transition": "Encounter_End"
     },
     "Encounter_End": {

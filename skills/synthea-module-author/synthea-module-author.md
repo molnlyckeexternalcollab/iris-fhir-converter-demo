@@ -59,6 +59,53 @@ Use when: adding lab panels to patients with pre-existing conditions, generating
 - The encounter is created specifically for this module's purpose (the module owns it)
 - Multiple `Guard` states can be chained with `conditional_transition` to branch into risk archetypes (low/moderate/high)
 
+### Keep module (population filter)
+
+Not a way to author patient data — a separate filter module that decides which generated patients get exported at all. Structurally it is a normal module (same `states`/`transitions` schema), but it must contain a `Terminal` state named exactly `Keep`.
+
+```text
+Initial → conditional_transition (Active Condition / Observation / ...) → Keep (Terminal)
+                                                                       → Terminal (discard)
+```
+
+At the end of each patient's simulated lifetime, Synthea runs this module once against the patient and checks which terminal state it landed on:
+
+- Landed on `Keep` → patient is exported.
+- Landed on any other terminal state → patient is discarded, and Synthea regenerates a new patient with the same demographic slot and a different seed.
+
+**Invocation is different from every other module type:**
+
+- Pass it with `-k path/to/keep_module.json` — never with `-d` (the local module directory). If placed in a directory loaded via `-d`, it just runs as an inert normal module for every patient and does nothing to filter the population.
+- Only one keep module can be active per run, but its logic can be arbitrarily nested with `And`/`Or`/`Not`.
+- In this project, store keep modules under `skills/synthea-module-author/keep_modules/`.
+- Reference: [NIH ODSS — Keep Modules](https://nih-odss.github.io/fhir-for-research/modules/synthea-customizing#keep-modules)
+
+**Checking for a Condition vs. an Observation:**
+
+`Active Condition` only tests for currently-active *conditions*. To filter on a lab value or any other recorded `Observation` (e.g., "has this patient ever had an albumin result?"), use the `Observation` condition type instead, with the `is not nil` operator so it doesn't require a value comparison:
+
+```json
+{
+  "condition_type": "Observation",
+  "codes": [{ "system": "LOINC", "code": "VALIDATE_ME", "display": "Albumin [Mass/volume] in Serum or Plasma" }],
+  "operator": "is not nil"
+}
+```
+
+**CRITICAL: `exporter.years_of_history` can silently defeat a keep module.** The keep check runs against the patient's full internal record at the end of simulation — but FHIR export separately trims anything older than `exporter.years_of_history` (default 10) from the *exported* bundle. A patient can genuinely satisfy the keep criteria internally, while the exact qualifying Observation or Condition falls outside the export window and is missing from the file you actually get, with no error raised. This was confirmed empirically: the same seed/population produced a kept patient with 0 matching observations at the default history window, and 1 when `--exporter.years_of_history=0` was used instead — with no other change.
+
+**Do not "fix" this by setting `years_of_history=0`.** That keeps the patient's *entire* life record — decades of childhood and young-adult data irrelevant to most keep criteria — which produces gigantic bundle files and can make FHIR store imports extremely slow. Instead, size `years_of_history` to the widest window in which the qualifying event could possibly occur:
+
+- If the keep criteria depend on a HAPI augmentation module, that module gates on `Age >= 55` via a `Guard`, so the event can never be older than `(max_age - min_age)` years relative to "now" (export reference time). For `-a 55-85`, that is 30 years — an 85-year-old could have had the qualifying event the instant they turned 55.
+- Set `years_of_history` to at least `max_age - min_age` (add a small margin, e.g. +1, for timestep/rounding safety), not to `0`.
+- This keeps files close to their normal size while still guaranteeing the keep-module's qualifying data survives export.
+
+**How `-a` (age range) and `exporter.years_of_history` actually interact — grounded in `Generator.java`/`Exporter.java`, not obvious from the docs alone:**
+
+- `-a min-max` is a **patient-selection filter only**. Every patient is always simulated from birth to the global reference time ("now", or a configured end date) — there is no "start the record at age `min`." A candidate is only kept in the population if their age *at the reference time* falls in the given range; the simulated timeline itself is unaffected by `-a`.
+- `exporter.years_of_history` trims the exported record to `[referenceTime - years, referenceTime]` (`Exporter.filterForExport`: `cutoffDate = endTime - years`). `endTime` is the same global reference time for every patient in the run — **not** each patient's own age-`min` birthday. For `-a 55-85` with `years_of_history=3`, the kept window is each patient's own most recent 3 years before "now": ages ~52-55 for a 55-year-old, but ages ~82-85 for an 85-year-old. It is never anchored to age 55 itself.
+- Only some entry types get a "still active" exemption from strict date filtering: conditions, allergies, medications, and careplans are kept if still active at any point after the cutoff, even if they started earlier (`entryIsActive` in `Exporter.filterForExport`). `Observation`, `Procedure`, and `Immunization` entries have no such exemption — they are kept only if their own timestamp falls inside the window. This is why an `Observation`-based keep criterion (e.g. albumin) needs `years_of_history` sized to the full `-a` span, while a `Condition`-based one may tolerate a smaller value if the condition stays active.
+
 ---
 
 ## Module JSON Schema
@@ -457,7 +504,7 @@ cd synthea && ./gradlew build -x test
 ./run_synthea -m <module_name> -p 1 -s 42 -a 30-60
 
 # Check output
-jq '.entry[].resource.resourceType' output/fhir/raw/*.json | sort | uniq -c | sort -rn
+jq '.entry[].resource.resourceType' output/raw/fhir/*.json | sort | uniq -c | sort -rn
 ```
 
 If the build fails, read the error — it usually points to the exact JSON issue (missing required field, invalid state type, bad transition target).
@@ -468,16 +515,16 @@ Verify the module produced the expected resources:
 
 ```bash
 # Check conditions
-jq -r '.entry[].resource | select(.resourceType=="Condition") | .code.coding[0].display' output/fhir/raw/*.json
+jq -r '.entry[].resource | select(.resourceType=="Condition") | .code.coding[0].display' output/raw/fhir/*.json
 
 # Check observations/labs
-jq -r '.entry[].resource | select(.resourceType=="Observation") | .code.coding[0].display' output/fhir/raw/*.json
+jq -r '.entry[].resource | select(.resourceType=="Observation") | .code.coding[0].display' output/raw/fhir/*.json
 
 # Check medications
-jq -r '.entry[].resource | select(.resourceType=="MedicationRequest") | .medicationCodeableConcept.coding[0].display' output/fhir/raw/*.json
+jq -r '.entry[].resource | select(.resourceType=="MedicationRequest") | .medicationCodeableConcept.coding[0].display' output/raw/fhir/*.json
 
 # Check procedures
-jq -r '.entry[].resource | select(.resourceType=="Procedure") | .code.coding[0].display' output/fhir/raw/*.json
+jq -r '.entry[].resource | select(.resourceType=="Procedure") | .code.coding[0].display' output/raw/fhir/*.json
 ```
 
 ### Step 4b: Augmentation module skeleton
@@ -588,7 +635,7 @@ All `VALIDATE_ME` codes must be replaced with real validated codes before this m
 - **Prevalence miscalibration** — A `distributed_transition` with `0.01` means 1% of the population per timestep (default 1 week). Over a 70-year life, that's not 1% prevalence. Use Synthea's `"remarks"` to document your prevalence math.
 - **Missing Terminal** — Every execution path must eventually reach a `Terminal` state or the module loops forever.
 - **Code system names** — Synthea uses `"SNOMED-CT"` not `"http://snomed.info/sct"` in the `system` field. The URI goes in FHIR export, not in the module JSON.
-- **`exporter.years_of_history` hides older events** — By default Synthea filters exported resources to recent history. If your module's procedures or early encounters are missing from the output, run with `--exporter.years_of_history=0` to keep everything.
+- **`exporter.years_of_history` hides older events** — By default Synthea filters exported resources to recent history. If your module's procedures or early encounters are missing from the output, increase `--exporter.years_of_history` to cover them; avoid `0` (entire history) unless the population is small, since it produces much larger bundle files and slower FHIR store imports. This is especially dangerous with a **keep module** (see **Keep module (population filter)** above): the keep check passes against the full internal record, but the trimmed export can still be missing the exact Observation/Condition that got the patient kept, with no error raised. Size `years_of_history` to at least `max_age - min_age` instead of reaching for `0`.
 - **Procedures need `duration`** — Add `"duration": { "low": N, "high": M, "unit": "minutes" }` to Procedure states. Without it, some exporters may skip them.
 - **`assign_to_attribute` on ConditionOnset** — If procedures or medications reference the condition via `reason`, add `"assign_to_attribute": "condition_name"` to the ConditionOnset state so the reference resolves.
 

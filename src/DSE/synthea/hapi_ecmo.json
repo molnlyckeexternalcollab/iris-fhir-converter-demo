@@ -4,6 +4,7 @@
     "Augmentation module: adds ECMO procedure for septic shock patients.",
     "Guards on Septic shock 76571007 only (more severe trigger than sepsis alone).",
     "Sets is_on_ecmo=True in HAPI DSE extraction.",
+    "assign_to_attribute: hapi_ecmo lets keep modules check for this Procedure via the Attribute condition type.",
     "Codes validated via https://tx.fhir.org/r4/CodeSystem/$validate-code:",
     "  SNOMED 233573008: ECMO - Extracorporeal membrane oxygenation",
     "  SNOMED 76571007: Septic shock"
@@ -35,6 +36,7 @@
         { "system": "SNOMED-CT", "code": "233573008", "display": "ECMO - Extracorporeal membrane oxygenation" }
       ],
       "duration": { "low": 2880, "high": 4320, "unit": "minutes" },
+      "assign_to_attribute": "hapi_ecmo",
       "direct_transition": "Encounter_End"
     },
     "Encounter_End": {

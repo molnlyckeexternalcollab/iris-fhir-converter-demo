@@ -6,6 +6,7 @@
     "active systemic infection or septic shock — the primary clinical indications for central",
     "venous access for vasopressor/fluid resuscitation in the ICU.",
     "The extraction script maps a Procedure with this SNOMED code to has_central_line=True.",
+    "assign_to_attribute: hapi_central_line lets keep modules check for this Procedure via the Attribute condition type.",
     "All codes validated against tx.fhir.org on 2026-07-23."
   ],
   "states": {
@@ -45,6 +46,7 @@
       ],
       "duration": { "low": 30, "high": 60, "unit": "minutes" },
       "target_encounter": "Inpatient_Encounter",
+      "assign_to_attribute": "hapi_central_line",
       "direct_transition": "Encounter_End"
     },
     "Encounter_End": {
