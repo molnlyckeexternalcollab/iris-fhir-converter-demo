@@ -30,40 +30,50 @@ function Markdown({ content }) {
 }
 
 function AgentLogo({ isRunning, className }) {
-  const svgRef  = useRef(null);
-  const waveRef = useRef(null);
+  const svgRef        = useRef(null);
+  const waveRef        = useRef(null);
+  const twinkleActive  = useRef(false);
 
-  // Corner diamonds twinkle perpetually from mount
-  useEffect(() => {
-    const sel = gsap.utils.selector(svgRef.current);
-    gsap.set(sel('#tl, #tr, #bl, #br'), { opacity: 0 });
-    function scheduleTwinkle(id) {
-      gsap.delayedCall(Math.random() * 0.4, () => {
-        gsap.timeline({ onComplete: () => scheduleTwinkle(id) })
-          .to(sel(id), { opacity: 1, duration: 0.3,  ease: 'power2.in' })
-          .to({},       { duration: 0.15 })
-          .to(sel(id), { opacity: 0, duration: 1.0,  ease: 'power1.out' });
-      });
-    }
-    ['#tl', '#tr', '#bl', '#br'].forEach(id =>
-      gsap.delayedCall(Math.random() * 1.45, () => scheduleTwinkle(id))
-    );
-    return () => gsap.killTweensOf(sel('#tl, #tr, #bl, #br'));
-  }, []);
-
-  // Circle wave runs while isRunning; finishes current cycle gracefully on stop
+  // Circles wave + corner twinkles share the same isRunning gate
   useEffect(() => {
     const sel     = gsap.utils.selector(svgRef.current);
     const circles = sel('#circ1, #circ2, #circ3, #circ4, #circ5');
+    const corners = ['#tl', '#tr', '#bl', '#br'];
+
     if (isRunning) {
+      // --- circles ---
       gsap.set(circles, { scale: 0, transformOrigin: '50% 50%' });
       waveRef.current = gsap.timeline({ repeat: -1, repeatDelay: 0.15 })
         .to(circles, { scale: 1, duration: 0.28, ease: 'back.out(2.2)', stagger: 0.1 })
         .to({},       { duration: 0.2 })
         .to(circles, { scale: 0, duration: 0.14, ease: 'power2.in',     stagger: 0.07 });
-    } else if (waveRef.current) {
-      waveRef.current.repeat(0);  // let current wave finish then stop
-      waveRef.current = null;
+
+      // --- corner twinkles ---
+      twinkleActive.current = true;
+      gsap.set(corners.map(id => sel(id)), { opacity: 0 });
+      function scheduleTwinkle(id) {
+        if (!twinkleActive.current) return;
+        gsap.delayedCall(Math.random() * 0.4, () => {
+          if (!twinkleActive.current) return;
+          gsap.timeline({ onComplete: () => scheduleTwinkle(id) })
+            .to(sel(id), { opacity: 1, duration: 0.3,  ease: 'power2.in' })
+            .to({},       { duration: 0.15 })
+            .to(sel(id), { opacity: 0, duration: 1.0,  ease: 'power1.out' });
+        });
+      }
+      corners.forEach(id =>
+        gsap.delayedCall(Math.random() * 1.45, () => scheduleTwinkle(id))
+      );
+    } else {
+      // --- stop circles ---
+      if (waveRef.current) {
+        waveRef.current.repeat(0);  // let current wave finish then stop
+        waveRef.current = null;
+      }
+      // --- stop corners: flag kills recursive chain, then fade out ---
+      twinkleActive.current = false;
+      corners.forEach(id => gsap.killTweensOf(sel(id)));
+      gsap.to(corners.map(id => sel(id)), { opacity: 0, duration: 0.3 });
     }
   }, [isRunning]);
 
