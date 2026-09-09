@@ -9,3 +9,6 @@ pydantic-settings
 PyJWT
 requests
 scipy
+langgraph
+langchain-openai
+langchain-core

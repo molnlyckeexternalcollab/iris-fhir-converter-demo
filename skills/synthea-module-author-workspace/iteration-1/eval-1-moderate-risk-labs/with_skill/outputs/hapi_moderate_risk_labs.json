@@ -1,0 +1,181 @@
+{
+  "name": "HAPI Moderate Risk Lab Observations",
+  "remarks": [
+    "Contextual augmentation module — not a disease module.",
+    "Emits albumin, BUN, chloride, and RDW-CV lab observations for patients age >= 55",
+    "who have an active diagnosis of heart failure (SNOMED 84114007) or frailty (SNOMED 248279007).",
+    "This corresponds to the moderate-risk archetype in the HAPI DSE risk calculator.",
+    "No distributed_transition is used — every patient meeting the Guard criteria receives the observations.",
+    "Albumin, BUN, and chloride are grouped under a metabolic panel DiagnosticReport (LOINC 24323-8).",
+    "RDW-CV is grouped under a CBC panel DiagnosticReport (LOINC 58410-2).",
+    "Value ranges reflect clinically realistic values for heart failure / frailty inpatients:",
+    "  Albumin 2.5-3.2 g/dL (mildly low — chronic illness / malnutrition)",
+    "  BUN 22-35 mg/dL (mildly elevated — reduced renal perfusion)",
+    "  Chloride 96-102 mEq/L (mildly low — diuretic effect in HF)",
+    "  RDW-CV 14.5-17.0 % (mildly elevated — anemia of chronic disease)",
+    "All LOINC and SNOMED codes validated against tx.fhir.org on 2026-07-22."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">=",
+            "quantity": 55,
+            "unit": "years"
+          },
+          "transition": "Condition_Check"
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Condition_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "84114007",
+                    "display": "Heart failure"
+                  }
+                ]
+              },
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "248279007",
+                    "display": "Frailty"
+                  }
+                ]
+              }
+            ]
+          },
+          "transition": "Inpatient_Encounter"
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "32485007",
+          "display": "Hospital admission"
+        }
+      ],
+      "direct_transition": "Metabolic_Panel"
+    },
+    "Metabolic_Panel": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24323-8",
+          "display": "Comprehensive metabolic 2000 panel - Serum or Plasma"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1751-7",
+              "display": "Albumin [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 2.5,
+            "high": 3.2
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "3094-0",
+              "display": "Urea nitrogen [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 22,
+            "high": 35
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mEq/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2075-0",
+              "display": "Chloride [Moles/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 96,
+            "high": 102
+          }
+        }
+      ],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "CBC_Panel"
+    },
+    "CBC_Panel": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "58410-2",
+          "display": "CBC panel - Blood by Automated count"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "unit": "%",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "788-0",
+              "display": "Erythrocyte [DistWidth] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 14.5,
+            "high": 17.0
+          }
+        }
+      ],
+      "target_encounter": "Inpatient_Encounter",
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

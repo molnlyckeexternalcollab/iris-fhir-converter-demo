@@ -1,0 +1,73 @@
+{
+  "name": "HAPI GIM Service",
+  "remarks": [
+    "Augmentation module: marks patients on General Internal Medicine (GIM) service.",
+    "No SNOMED code exists for GIM admission as a procedure; we use a probabilistic approach",
+    "on patients aged >=55 with heart failure or frailty — typical GIM patients.",
+    "Sets is_on_gim_service=True in HAPI DSE extraction.",
+    "Extraction detects Observation with system 'http://hapi-dse.local/CodeSystem' code 'gim-service'.",
+    "This is a synthetic local code — no SNOMED validation required."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "GIM_Guard"
+    },
+    "GIM_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "84114007", "display": "Heart failure (disorder)" }]
+          },
+          {
+            "condition_type": "Active Condition",
+            "codes": [{ "system": "SNOMED-CT", "code": "248279007", "display": "Frailty (finding)" }]
+          }
+        ]
+      },
+      "direct_transition": "GIM_Branch"
+    },
+    "GIM_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.60, "transition": "Inpatient_Encounter" },
+        { "distribution": 0.40, "transition": "Terminal" }
+      ]
+    },
+    "Inpatient_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        { "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission (procedure)" }
+      ],
+      "direct_transition": "GIM_Observation"
+    },
+    "GIM_Observation": {
+      "type": "Observation",
+      "category": "survey",
+      "codes": [
+        {
+          "system": "http://hapi-dse.local/CodeSystem",
+          "code": "gim-service",
+          "display": "Patient on General Internal Medicine service"
+        }
+      ],
+      "value_code": {
+        "system": "http://hapi-dse.local/CodeSystem",
+        "code": "true",
+        "display": "True"
+      },
+      "direct_transition": "Encounter_End"
+    },
+    "Encounter_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  }
+}

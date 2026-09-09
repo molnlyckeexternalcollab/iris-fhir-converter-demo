@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 
+import iris
 import requests
 from liquid import FileSystemLoader
 from fhir_converter.renderers import Hl7v2Renderer, make_environment, hl7v2_default_loader
@@ -15,7 +16,8 @@ from EAI.msg import (
     FhirConverterResponse,
     FhirFileDropResponse,
     FhirRequest,
-    FhirResponse
+    FhirResponse,
+    FHIRDataLoaderRequest
 )
 
 from DSE.models import RiskCalculationResult
@@ -245,4 +247,213 @@ class FhirHttpOperation(BusinessOperation):
                     )
         except ValueError:
             # Not JSON, skip validation
+            pass
+
+class FHIRDataLoaderOperation(BusinessOperation):
+    """FHIR file import via HS.FHIRServer.Tools.DataLoader.
+
+    Owns the destination effect: submitting FHIR files from a directory to the
+    IRIS FHIR server. All SubmitResourceFiles parameters are exposed as production
+    settings configurable from the UI.
+
+    Overlap protection
+    ------------------
+    Uses the IRIS global specified by ``log_global`` + ``job_id`` to check whether
+    the previous run is still "Running" before starting a new one. Works correctly
+    with async multi-worker runs and survives IRIS restarts.
+    When ``log_global`` is empty, overlap protection is disabled (safe for
+    synchronous single-worker runs because SubmitResourceFiles then blocks).
+
+    Statistics (when log_global is set)
+    ------------------------------------
+        @<log_global>@(<job_id>, "Status")              — Running / Complete / ERROR
+        @<log_global>@(<job_id>, "FilesTotal")           — files processed
+        @<log_global>@(<job_id>, "ResourcesTotal")       — resources submitted
+        @<log_global>@(<job_id>, "ErrorCount")           — non-fatal errors
+        @<log_global>@(<job_id>, "RunDuration")          — wall-clock time
+        @<log_global>@(<job_id>, "ElapsedAvgPerFile")    — avg time per file
+        @<log_global>@(<job_id>, "ElapsedAvgPerResource")
+        (see HS.FHIRServer.Tools.DataLoader docs for full list)
+    """
+
+    # ------------------------------------------------------------------ settings
+
+    input_directory: str = "/fhir-samples/references"
+    """Folder to scan for FHIR JSON/NDJSON/XML files (absolute path inside the container)."""
+
+    service_type: str = "HTTP"
+    """
+    "HTTP" (default) = cross-namespace load via a Service Registry HTTP service.
+        Use this when the FHIR server is in a different namespace (e.g. FHIRSERVER).
+    "FHIRServer" = direct in-process load — only works when running in the same
+        namespace as the FHIR server. Faster but namespace-restricted.
+    """
+
+    service_name: str = "fhir-internal-webgateway"
+    """
+    For service_type="HTTP": name of the Service Registry HTTP service entry that
+        points to the FHIR server endpoint.
+        Licensed IRIS 2023.2+ has no private web server; register the entry with
+        Host=webgateway Port=80 so that %Net.HttpRequest routes via the webgateway
+        container (intra-Docker-network, no TLS overhead).
+    For service_type="FHIRServer": the FHIR server endpoint path (e.g. /fhir/r4),
+        only valid when running in the same namespace as the FHIR server.
+    """
+
+    file_limit: str = ""
+    """Limit to the first N files per run. Empty string = no limit (pFileLimit)."""
+
+    display_progress: bool = False
+    """
+    Pass pDisplayProgress=1 to DataLoader, which writes progress messages to the
+    IRIS console/terminal output. Defaults to False because the operation already
+    emits structured log entries via log_info / log_warning.
+    Enable temporarily when debugging a new configuration from an IRIS terminal.
+    """
+
+    num_workers: int = 0
+    """
+    Number of parallel work queue jobs allocated by %SYSTEM.WorkMgr.
+    0 (default) = use the system default (mirrors the DataLoader ObjectScript default).
+    Set to a positive integer to pin a specific worker count.
+    """
+
+    recursive: bool = False
+    """Recurse into sub-directories of input_directory (pRecursive)."""
+
+    clean_up: bool = False
+    """
+    WARNING: deletes the entire input_directory when the run completes (pCleanUp).
+    Do NOT enable on a bind-mounted host directory unless you intend to delete it.
+    """
+
+    translate_table: str = "UTF8"
+    """Character encoding of input files (pTranslateTable)."""
+
+    log_global: str = "^EAIFHIRDataLoader"
+    """
+    Name of the IRIS global used to record run statistics and status.
+    Also used for overlap detection: a run is skipped if job_id still shows
+    Status="Running" in this global.
+    Set to "" to disable logging and overlap detection.
+    """
+
+    job_id: str = "EAIFHIRDataLoader"
+    """
+    Fixed key written into log_global for each run (pJobId).
+    Each run overwrites the previous stats, enabling reliable overlap detection
+    across IRIS restarts. Change this to distinguish multiple import operations.
+    """
+
+    # ------------------------------------------------------------------ handler
+
+    def on_message(self, request: FHIRDataLoaderRequest) -> None:
+        """Triggered by FHIRDataLoaderService (scheduled or manual)."""
+        status_obj = self._get_job_status()
+        if status_obj is not None and status_obj._Get("status") == "Running":
+            if self._is_process_alive(status_obj._Get("processId")):
+                self.log_warning(
+                    f"Import job '{self.job_id}' is still running "
+                    f"(trigger={request.reason!r}) — skipping. "
+                    f"Progress so far: files={status_obj._Get('filesTotal')} "
+                    f"resources={status_obj._Get('resourcesTotal')} "
+                    f"elapsed={status_obj._Get('elapsedTotal')}s "
+                    f"started={status_obj._Get('started')}. "
+                    "Increase CallInterval or reduce file count / num_workers."
+                )
+                return
+            # Process is dead but status was never updated (e.g. <EXTERNAL INTERRUPT>).
+            # Treat as stale and allow a new run.
+            self.log_warning(
+                f"Import job '{self.job_id}' has stale 'Running' status — "
+                f"process {status_obj._Get('processId')!r} is no longer alive "
+                f"(likely killed or interrupted). Proceeding with new run."
+            )
+
+        if status_obj is not None:
+            self._log_last_run_stats(status_obj)
+
+        num_workers = (
+            iris.cls("%SYSTEM.WorkMgr").DefaultNumWorkers()
+            if self.num_workers == 0
+            else self.num_workers
+        )
+        self.log_info(
+            f"Starting FHIR file import (trigger={request.reason!r}) "
+            f"dir='{self.input_directory}' service_type='{self.service_type}' "
+            f"service_name='{self.service_name}' workers={num_workers} "
+            f"recursive={self.recursive} clean_up={self.clean_up} "
+            f"file_limit={self.file_limit!r}"
+        )
+        file_limit_os = f'"{self.file_limit}"' if self.file_limit else '""'
+        self.log_info(
+            f"Equivalent ObjectScript: "
+            f'do ##class(HS.FHIRServer.Tools.DataLoader).SubmitResourceFiles('
+            f'"{self.input_directory}", "{self.service_type}", "{self.service_name}", '
+            f'{int(self.display_progress)}, "{self.log_global}", {file_limit_os}, "{self.translate_table}", '
+            f'{num_workers}, "{self.job_id}", {int(self.recursive)}, {int(self.clean_up)})'
+        )
+        try:
+            sc = iris.cls("HS.FHIRServer.Tools.DataLoader").SubmitResourceFiles(
+                self.input_directory,   # pInputDirectory
+                self.service_type,      # pServiceType  ("FHIRSERVER" | "HTTP")
+                self.service_name,      # pServiceName
+                int(self.display_progress),  # pDisplayProgress
+                self.log_global,        # pLogGlobal    (stats + overlap tracking)
+                self.file_limit,        # pFileLimit    ("" = no limit)
+                self.translate_table,   # pTranslateTable
+                num_workers,            # pNumWorkers
+                self.job_id,            # pJobId        (user-specified fixed key)
+                self.recursive,         # pRecursive
+                self.clean_up,          # pCleanUp      (WARNING: deletes InputDirectory!)
+                                        # pTransactionId omitted (internal use only)
+            )
+            if sc == 1:  # $$$OK
+                self.log_info(f"FHIR file import completed (job='{self.job_id}').")
+            else:
+                self.log_warning(f"FHIR file import finished with status: {sc}")
+        except Exception as exc:
+            self.log_error(f"FHIR file import failed: {exc}")
+
+    # ------------------------------------------------------------------ helpers
+
+    def _get_job_status(self):
+        """Return the DataLoader.Status() DynamicObject for job_id, or None on failure."""
+        if not self.job_id:
+            return None
+        try:
+            return iris.cls("HS.FHIRServer.Tools.DataLoader").Status(self.job_id)
+        except Exception:
+            return None
+
+    def _is_process_alive(self, process_id_str) -> bool:
+        """Return True if the process is confirmed running, False if confirmed dead.
+
+        Uses %SYS.ProcessQuery to check whether the recorded process ID still
+        exists. When the check itself fails (e.g. insufficient privilege), returns
+        True conservatively to avoid accidentally starting parallel imports.
+        """
+        if not process_id_str:
+            return True  # no PID recorded → can't verify → conservative
+        try:
+            pq = iris.cls("%SYS.ProcessQuery")._OpenId(int(process_id_str))
+            # _OpenId returns "" (IRIS nil) when the ID does not exist
+            return bool(pq)
+        except Exception:
+            return True  # can't verify → conservative
+
+    def _log_last_run_stats(self, status_obj) -> None:
+        """Log statistics from the previous completed DataLoader run."""
+        try:
+            job_status = status_obj._Get("status")
+            if not job_status or job_status == "Not found":
+                return
+            self.log_info(
+                f"Previous run '{self.job_id}': status={job_status} "
+                f"files={status_obj._Get('filesTotal')} "
+                f"resources={status_obj._Get('resourcesTotal')} "
+                f"duration={status_obj._Get('runDuration')}s "
+                f"errors={status_obj._Get('errorCount')}"
+            )
+        except Exception:
             pass

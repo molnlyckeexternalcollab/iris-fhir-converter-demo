@@ -1,0 +1,165 @@
+{
+  "name": "Moderate Risk Labs (HF/Frailty)",
+  "remarks": [
+    "Emits albumin, BUN, chloride, and RDW-CV labs for patients age 55+ with active heart failure or frailty.",
+    "These labs reflect common metabolic and hematologic abnormalities in this population:",
+    "  - Hypoalbuminemia (2.8-4.2 g/dL) from malnutrition and systemic inflammation",
+    "  - Elevated BUN (15-45 mg/dL) from reduced renal perfusion in heart failure",
+    "  - Low-normal chloride (94-108 mmol/L) from diuretic use or dilutional effects",
+    "  - Elevated RDW-CV (13.0-18.0 %) reflecting nutritional deficiencies and chronic inflammation",
+    "Labs are ordered annually while the patient has an active qualifying condition.",
+    "All LOINC and SNOMED codes validated against tx.fhir.org prior to module authoring."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 55,
+        "unit": "years"
+      },
+      "direct_transition": "Condition_Check"
+    },
+    "Condition_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "84114007",
+                    "display": "Heart failure"
+                  }
+                ]
+              },
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "248279007",
+                    "display": "Frailty"
+                  }
+                ]
+              }
+            ]
+          },
+          "transition": "Encounter_Moderate_Risk_Labs"
+        },
+        {
+          "transition": "Terminal"
+        }
+      ]
+    },
+    "Encounter_Moderate_Risk_Labs": {
+      "type": "Encounter",
+      "encounter_class": "ambulatory",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Observation_Albumin"
+    },
+    "Observation_Albumin": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "g/dL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "1751-7",
+          "display": "Albumin [Mass/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 2.8,
+        "high": 4.2
+      },
+      "target_encounter": "Encounter_Moderate_Risk_Labs",
+      "direct_transition": "Observation_BUN"
+    },
+    "Observation_BUN": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "mg/dL",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "3094-0",
+          "display": "Urea nitrogen [Mass/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 15,
+        "high": 45
+      },
+      "target_encounter": "Encounter_Moderate_Risk_Labs",
+      "direct_transition": "Observation_Chloride"
+    },
+    "Observation_Chloride": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "mmol/L",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "2075-0",
+          "display": "Chloride [Moles/volume] in Serum or Plasma"
+        }
+      ],
+      "range": {
+        "low": 94,
+        "high": 108
+      },
+      "target_encounter": "Encounter_Moderate_Risk_Labs",
+      "direct_transition": "Observation_RDW_CV"
+    },
+    "Observation_RDW_CV": {
+      "type": "Observation",
+      "category": "laboratory",
+      "unit": "%",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "788-0",
+          "display": "Erythrocyte [DistWidth] in Blood by Automated count"
+        }
+      ],
+      "range": {
+        "low": 13.0,
+        "high": 18.0
+      },
+      "target_encounter": "Encounter_Moderate_Risk_Labs",
+      "direct_transition": "EncounterEnd_Labs"
+    },
+    "EncounterEnd_Labs": {
+      "type": "EncounterEnd",
+      "direct_transition": "Annual_Delay"
+    },
+    "Annual_Delay": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "years"
+      },
+      "direct_transition": "Condition_Check"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

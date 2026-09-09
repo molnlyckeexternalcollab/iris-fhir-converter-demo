@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="59.918575mm"
+   height="9.1186047mm"
+   viewBox="0 0 59.918575 9.1186047"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="molnlycke-medgemma.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showguides="true"
+     inkscape:zoom="5.3269807"
+     inkscape:cx="99.868955"
+     inkscape:cy="8.2598384"
+     inkscape:window-width="2403"
+     inkscape:window-height="1137"
+     inkscape:window-x="1162"
+     inkscape:window-y="200"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1">
+    <sodipodi:guide
+       position="21.420826,302.62365"
+       orientation="1,0"
+       id="guide4"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient3"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#004007;stop-opacity:1;"
+         offset="0"
+         id="stop3" />
+      <stop
+         style="stop-color:#16a44a;stop-opacity:1;"
+         offset="1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3"
+       id="linearGradient4"
+       x1="62.227684"
+       y1="150.95285"
+       x2="120.10458"
+       y2="166.46091"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(21.246599,-2.2889489)" />
+  </defs>
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-60.825364,-151.85864)">
+    <text
+       xml:space="preserve"
+       style="font-size:12.7px;font-family:'Molnlycke Sans';-inkscape-font-specification:'Molnlycke Sans';writing-mode:lr-tb;direction:ltr;display:inline;fill:#000000;stroke-width:0.264583"
+       x="59.910957"
+       y="160.86293"
+       id="text2"
+       inkscape:label="solid"><tspan
+         sodipodi:role="line"
+         id="tspan2"
+         style="font-size:12.7px;stroke-width:0.264583"
+         x="59.910957"
+         y="160.86293">Med</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12.7px;font-family:'Molnlycke Sans';-inkscape-font-specification:'Molnlycke Sans';writing-mode:lr-tb;direction:ltr;display:inline;fill:url(#linearGradient4);stroke-width:0.264583"
+       x="81.53904"
+       y="160.86293"
+       id="text3"
+       inkscape:label="gradient"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         style="font-size:12.7px;fill:url(#linearGradient4);stroke-width:0.264583"
+         x="81.53904"
+         y="160.86293">Gemma</tspan></text>
+  </g>
+</svg>

@@ -1,0 +1,410 @@
+{
+  "name": "HAPI Braden Assessments",
+  "remarks": [
+    "Contextual augmentation module for synthetic HAPI nursing assessment data.",
+    "This is not a disease module and does not alter disease prevalence.",
+    "Eligibility requires age >= 55 and an active pressure-injury-risk or acute-care condition.",
+    "Patients with age alone, seasonal influenza alone, diabetes alone, or abnormal HAPI laboratory values do not qualify.",
+    "The module creates an inpatient encounter only after the eligibility guards pass.",
+    "Generated values are synthetic test-data heuristics and do not represent actual nursing documentation.",
+    "The five Braden domains use LOINC 38224-2, 38229-1, 38223-4, 38226-7, and 38222-6.",
+    "Gait and transfer is a separate model feature using LOINC 93015-6 and values 0=normal, 10=weak, 20=impaired.",
+    "Nutrition is not generated because it is not part of the current HAPI calculator input contract.",
+    "Survey observations use numeric exact quantities with unit {score}; missing assessments are omitted rather than emitted as a literal value.",
+    "All SNOMED-CT and LOINC codes were validated against tx.fhir.org on 2026-09-03.",
+    "Built-in Synthea mappings include chronic congestive heart failure 88805009 and vertebral fracture with spinal cord injury 1734006; the project-specific HAPI mappings 84114007 and 90584004 remain supported.",
+    "Severe profile: spinal cord injury, systemic infection, or septic shock; mostly immobile or very limited mobility and impaired or weak gait.",
+    "Moderate profile: frailty or intensive care unit; moderately limited mobility and activity with weak gait.",
+    "Mild profile: heart failure without a stronger risk context; slightly limited or full mobility with normal or weak gait.",
+    "Moisture, friction, and sensory values are generated as explicit correlated synthetic assumptions within their documented score ranges."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Age_Guard"
+    },
+    "Age_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Age",
+        "operator": ">=",
+        "quantity": 55,
+        "unit": "years"
+      },
+      "direct_transition": "Clinical_Eligibility_Guard"
+    },
+    "Clinical_Eligibility_Guard": {
+      "type": "Guard",
+      "allow": {
+        "condition_type": "Or",
+        "conditions": [
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "248279007", "display": "Frailty" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Systemic infection" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "84114007", "display": "Heart failure" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "88805009", "display": "Chronic congestive heart failure" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "90584004", "display": "Spinal cord injury" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "1734006", "display": "Fracture of vertebral column with spinal cord injury" }] },
+          { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "309904001", "display": "Intensive care unit" }] }
+        ]
+      },
+      "direct_transition": "Risk_Profile_Branch"
+    },
+    "Risk_Profile_Branch": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "90584004", "display": "Spinal cord injury" }] },
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "1734006", "display": "Fracture of vertebral column with spinal cord injury" }] },
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "91302008", "display": "Systemic infection" }] },
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "76571007", "display": "Septic shock" }] }
+            ]
+          },
+          "transition": "Severe_Profile_Encounter"
+        },
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "248279007", "display": "Frailty" }] },
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "309904001", "display": "Intensive care unit" }] }
+            ]
+          },
+          "transition": "Moderate_Profile_Encounter"
+        },
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "84114007", "display": "Heart failure" }] },
+              { "condition_type": "Active Condition", "codes": [{ "system": "SNOMED-CT", "code": "88805009", "display": "Chronic congestive heart failure" }] }
+            ]
+          },
+          "transition": "Mild_Profile_Encounter"
+        },
+        { "transition": "Terminal" }
+      ]
+    },
+    "Severe_Profile_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [{ "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }],
+      "direct_transition": "Severe_Profile_Branch"
+    },
+    "Severe_Profile_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.65, "transition": "Severe_Immobile_Assessment" },
+        { "distribution": 0.35, "transition": "Severe_Limited_Assessment" }
+      ]
+    },
+    "Severe_Immobile_Assessment": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }],
+      "exact": { "quantity": 1 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Immobile_Moisture"
+    },
+    "Severe_Immobile_Moisture": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Immobile_Activity"
+    },
+    "Severe_Immobile_Activity": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }],
+      "exact": { "quantity": 1 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Immobile_Friction"
+    },
+    "Severe_Immobile_Friction": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }],
+      "exact": { "quantity": 1 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Immobile_Sensory"
+    },
+    "Severe_Immobile_Sensory": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Immobile_Gait"
+    },
+    "Severe_Immobile_Gait": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }],
+      "exact": { "quantity": 20 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Profile_End"
+    },
+    "Severe_Limited_Assessment": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Limited_Moisture"
+    },
+    "Severe_Limited_Moisture": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Limited_Activity"
+    },
+    "Severe_Limited_Activity": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Limited_Friction"
+    },
+    "Severe_Limited_Friction": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Limited_Sensory"
+    },
+    "Severe_Limited_Sensory": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Limited_Gait"
+    },
+    "Severe_Limited_Gait": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }],
+      "exact": { "quantity": 10 },
+      "target_encounter": "Severe_Profile_Encounter",
+      "direct_transition": "Severe_Profile_End"
+    },
+    "Severe_Profile_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Moderate_Profile_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [{ "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }],
+      "direct_transition": "Moderate_Mobility"
+    },
+    "Moderate_Mobility": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Moisture"
+    },
+    "Moderate_Moisture": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Activity"
+    },
+    "Moderate_Activity": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Friction"
+    },
+    "Moderate_Friction": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }],
+      "exact": { "quantity": 2 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Sensory"
+    },
+    "Moderate_Sensory": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Gait"
+    },
+    "Moderate_Gait": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }],
+      "exact": { "quantity": 10 },
+      "target_encounter": "Moderate_Profile_Encounter",
+      "direct_transition": "Moderate_Profile_End"
+    },
+    "Moderate_Profile_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Mild_Profile_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [{ "system": "SNOMED-CT", "code": "32485007", "display": "Hospital admission" }],
+      "direct_transition": "Mild_Profile_Branch"
+    },
+    "Mild_Profile_Branch": {
+      "type": "Simple",
+      "distributed_transition": [
+        { "distribution": 0.70, "transition": "Mild_Limited_Assessment" },
+        { "distribution": 0.30, "transition": "Mild_Normal_Assessment" }
+      ]
+    },
+    "Mild_Limited_Assessment": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Limited_Moisture"
+    },
+    "Mild_Limited_Moisture": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Limited_Activity"
+    },
+    "Mild_Limited_Activity": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Limited_Friction"
+    },
+    "Mild_Limited_Friction": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Limited_Sensory"
+    },
+    "Mild_Limited_Sensory": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Limited_Gait"
+    },
+    "Mild_Limited_Gait": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }],
+      "exact": { "quantity": 10 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Profile_End"
+    },
+    "Mild_Normal_Assessment": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38224-2", "display": "Physical mobility Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Normal_Moisture"
+    },
+    "Mild_Normal_Moisture": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38229-1", "display": "Moisture exposure Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Normal_Activity"
+    },
+    "Mild_Normal_Activity": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38223-4", "display": "Physical activity Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Normal_Friction"
+    },
+    "Mild_Normal_Friction": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38226-7", "display": "Friction and shear Braden scale" }],
+      "exact": { "quantity": 3 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Normal_Sensory"
+    },
+    "Mild_Normal_Sensory": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "38222-6", "display": "Sensory perception Braden scale" }],
+      "exact": { "quantity": 4 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Normal_Gait"
+    },
+    "Mild_Normal_Gait": {
+      "type": "Observation",
+      "category": "survey",
+      "unit": "{score}",
+      "codes": [{ "system": "LOINC", "code": "93015-6", "display": "Gait and turn and tandem gait assessment" }],
+      "exact": { "quantity": 0 },
+      "target_encounter": "Mild_Profile_Encounter",
+      "direct_transition": "Mild_Profile_End"
+    },
+    "Mild_Profile_End": {
+      "type": "EncounterEnd",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    }
+  },
+  "gmf_version": 2
+}

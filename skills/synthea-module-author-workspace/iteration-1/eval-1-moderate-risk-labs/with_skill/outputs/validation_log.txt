@@ -1,0 +1,46 @@
+Code Validation Log
+Date: 2026-07-22
+Terminology server: https://tx.fhir.org/r4
+
+LOINC Codes
+===========
+Code      System  Result  Canonical Display (tx.fhir.org)                          Intent / Used for
+--------  ------  ------  -------------------------------------------------------  ------------------------------------
+1751-7    LOINC   VALID   Albumin [Mass/volume] in Serum or Plasma                 Albumin observation (moderate-risk range: 2.5-3.2 g/dL)
+3094-0    LOINC   VALID   Urea nitrogen [Mass/volume] in Serum or Plasma           BUN observation (moderate-risk range: 22-35 mg/dL)
+2075-0    LOINC   VALID   Chloride [Moles/volume] in Serum or Plasma               Chloride observation (moderate-risk range: 96-102 mEq/L)
+788-0     LOINC   VALID   Erythrocyte [DistWidth] in Blood by Automated count      RDW-CV observation (moderate-risk range: 14.5-17.0 %)
+24323-8   LOINC   VALID   Comprehensive metabolic 2000 panel - Serum or Plasma     DiagnosticReport panel code for albumin/BUN/chloride
+58410-2   LOINC   VALID   CBC panel - Blood by Automated count                     DiagnosticReport panel code for RDW-CV
+
+SNOMED-CT Codes
+===============
+Code       System      Result  Canonical Display (tx.fhir.org)  Intent / Used for
+---------  ----------  ------  --------------------------------  ------------------------------------
+84114007   SNOMED-CT   VALID   Heart failure                     Active Condition guard (moderate-risk)
+248279007  SNOMED-CT   VALID   Frailty                           Active Condition guard (moderate-risk)
+32485007   SNOMED-CT   VALID   Hospital admission                Encounter state code
+
+Display Match Check
+===================
+All canonical displays from tx.fhir.org match the intended clinical concept. No hallucination detected.
+
+- LOINC 1751-7: "Albumin [Mass/volume] in Serum or Plasma" — matches intent (serum albumin)   PASS
+- LOINC 3094-0: "Urea nitrogen [Mass/volume] in Serum or Plasma" — matches intent (BUN)       PASS
+- LOINC 2075-0: "Chloride [Moles/volume] in Serum or Plasma" — matches intent (serum chloride) PASS
+- LOINC 788-0:  "Erythrocyte [DistWidth] in Blood by Automated count" — matches intent (RDW-CV) PASS
+- LOINC 24323-8: "Comprehensive metabolic 2000 panel - Serum or Plasma" — matches intent       PASS
+- LOINC 58410-2: "CBC panel - Blood by Automated count" — matches intent                       PASS
+- SNOMED 84114007: "Heart failure" — matches intent                                            PASS
+- SNOMED 248279007: "Frailty" — matches intent                                                 PASS
+- SNOMED 32485007:  "Hospital admission" — matches intent                                      PASS
+
+Notes
+=====
+- Chloride unit: LOINC display says "Moles/volume" but reported clinical unit is mEq/L.
+  For monovalent ions, 1 mmol/L == 1 mEq/L, so mEq/L is the standard clinical reporting unit.
+  The unit field in the Synthea module uses "mEq/L" per clinical convention and the HAPI DSE API spec.
+- RDW-CV display "Erythrocyte [DistWidth]" is the canonical LOINC form; the familiar clinical label
+  is "RDW-CV". The code is correct.
+- Source of value ranges: references/hapi-labs.md (pre-validated project reference, 2026-07-22),
+  which documents moderate-risk ranges derived from clinical literature for HF/frailty inpatients.
