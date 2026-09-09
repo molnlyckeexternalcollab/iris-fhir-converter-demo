@@ -3,6 +3,8 @@
 HAPI risk assessment messages
 """
 
+from typing import Any
+
 from iop import PydanticMessage
 
 from DSE.models import RiskAssessmentInput, RiskCalculationResult
@@ -13,6 +15,11 @@ from DSE.models import RiskAssessmentInput, RiskCalculationResult
 
 class RiskAssessmentInputRequest(PydanticMessage):
     input: RiskAssessmentInput
+
+
+class RiskAssessmentBundleRequest(PydanticMessage):
+    """Carries an already-fetched FHIR Bundle (or single resource) to extract inputs from."""
+    bundle: dict[str, Any]
 
 
 class RiskAssessmentResultResponse(PydanticMessage):
